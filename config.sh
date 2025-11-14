@@ -83,7 +83,7 @@ RECONNECT_DELAY_MAX="10"
 RECONNECT_ATTEMPTS="-1"  # -1 = unlimited attempts
 
 # Encoding settings
-PRESET="veryfast"  # ultrafast, superfast, veryfast, faster, fast, medium, slow
+PRESET="ultrafast"  # ultrafast, superfast, veryfast, faster, fast, medium, slow
 TUNE="zerolatency"  # For live streaming
 PIXEL_FORMAT="yuv420p"
 
@@ -119,7 +119,7 @@ LOGO_OPACITY="1.0"
 # ═══════════════════════════════════════════════════════════
 
 # Use GPU for encoding (if available)
-USE_GPU="auto"  # auto, nvidia, intel, amd, off
+USE_GPU="off"  # auto, nvidia, intel, amd, off
 
 # Number of threads for CPU encoding
 THREADS="0"  # 0 = automatic
