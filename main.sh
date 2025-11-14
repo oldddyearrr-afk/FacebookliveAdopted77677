@@ -218,15 +218,14 @@ build_ffmpeg_command() {
     # OUTPUT PARAMETERS (after -i)
     # ─────────────────────────────────────────────────────────
     
-    # Copy video and audio without re-encoding (fastest!)
-    output_params="$output_params -c:v copy"
-    output_params="$output_params -c:a copy"
-    
-    # If source doesn't match FB requirements, uncomment below:
-    # output_params="$output_params -c:v $VIDEO_ENCODER"
-    # output_params="$output_params -preset veryfast -tune zerolatency"
-    # output_params="$output_params -b:v $BITRATE -maxrate $MAXRATE -bufsize $BUFSIZE"
-    # output_params="$output_params -c:a aac -b:a 128k -ar 44100"
+    # Re-encode video to H.264 and audio to AAC (Facebook requirement)
+    output_params="$output_params -c:v $VIDEO_ENCODER"
+    output_params="$output_params -preset $PRESET -tune $TUNE"
+    output_params="$output_params -b:v $BITRATE -maxrate $MAXRATE -bufsize $BUFSIZE"
+    output_params="$output_params -pix_fmt $PIXEL_FORMAT"
+    output_params="$output_params -g $((FPS * KEYINT))"
+    output_params="$output_params -keyint_min $((FPS * KEYINT))"
+    output_params="$output_params -c:a aac -b:a 128k -ar 44100 -ac 2"
     
     # Output format for RTMP/Facebook
     output_params="$output_params -f flv"
