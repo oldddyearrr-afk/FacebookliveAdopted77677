@@ -9,7 +9,7 @@
 # ═══════════════════════════════════════════════════════════
 
 # M3U8 video source URL
-SOURCE="http://soft24f.net/live/6872c3410e8cibopro/22bcpapc/237014.ts"
+SOURCE="http://g.rosexz.xyz/at/sh/805768?token=SxAKVEBaQ14XUwYBBVYCD1VdBQRSB1cABAAEUVoFBw4JC1ADBQZUAVQTHBNGEEFcBQhpWAASCFcBAABTFUQTR0NXEGpaVkNeFwUHBgxVBAxGSRRFDV1XQA8ABlQKUFcFCAdXGRFCCAAXC15EWQgfGwEdQlQWXlMOalVUElAFAxQKXBdZXx5DC1tuVFRYBV1dRl8UAEYcEAtGQRNeVxMKWhwQAFxHQAAQUBMKX0AIXxVGBllECkRAGxcLEy1oREoUVUoWUF1BCAtbEwoTQRcRFUYMRW4WVUEWR1RQCVwURAwSAkAZEV8AHGpSX19bAVBNDQpYQkYKEFMXHRMJVggPQl9APUVaVkNeW0RcXUg"
 
 # RTMP server for Facebook (Stream Key is fetched from environment variables for security)
 RTMP_SERVER="rtmps://live-api-s.facebook.com:443/rtmp/"
