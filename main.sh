@@ -46,23 +46,23 @@ log_error() {
 
 check_requirements() {
     log_info "Checking system requirements..."
-    
+
     local missing_deps=()
-    
+
     if ! command -v ffmpeg &> /dev/null; then
         missing_deps+=("ffmpeg")
     fi
-    
+
     if ! command -v tmux &> /dev/null; then
         missing_deps+=("tmux")
     fi
-    
+
     if [ ${#missing_deps[@]} -ne 0 ]; then
         log_error "Missing dependencies: ${missing_deps[*]}"
         log_info "Please install them first"
         exit 1
     fi
-    
+
     log_success "All requirements met"
 }
 
@@ -72,7 +72,7 @@ check_requirements() {
 
 check_internet() {
     log_info "Checking internet connection..."
-    
+
     # Try ping first
     if ping -c 1 -W 3 8.8.8.8 &> /dev/null; then
         log_success "Internet connection OK"
@@ -83,7 +83,7 @@ check_internet() {
         log_info "Please check your network connection"
         exit 1
     fi
-    
+
     # Test Facebook RTMP connection
     log_info "Testing Facebook RTMP server..."
     if timeout 5 bash -c "echo > /dev/tcp/live-api-s.facebook.com/443" 2>/dev/null; then
@@ -99,19 +99,19 @@ check_internet() {
 
 check_stream_key() {
     log_info "Checking stream key..."
-    
+
     if [ -z "$FB_STREAM_KEY" ]; then
         log_error "Stream key not found!"
         log_warning "Please set environment variable: FB_STREAM_KEY"
         log_info "Example: export FB_STREAM_KEY='your-stream-key-here'"
         exit 1
     fi
-    
+
     if [ "$FB_STREAM_KEY" = "YOUR_STREAM_KEY_HERE" ]; then
         log_error "Please change stream key from default value"
         exit 1
     fi
-    
+
     log_success "Stream key found"
 }
 
@@ -122,10 +122,10 @@ check_stream_key() {
 check_source() {
     log_info "Checking source URL..."
     log_info "Source: $SOURCE"
-    
+
     # Try to get HTTP response
     local http_code=$(curl -Is --max-time 10 "$SOURCE" 2>/dev/null | head -n 1 | grep -oP '\d{3}' | head -n 1)
-    
+
     if [ -n "$http_code" ]; then
         if echo "$http_code" | grep -q "200\|302\|301"; then
             log_success "Source URL is accessible (HTTP $http_code)"
@@ -135,7 +135,7 @@ check_source() {
     else
         log_warning "Could not verify source via HTTP"
     fi
-    
+
     # Try ffprobe to check if it's a valid stream
     log_info "Testing source with FFmpeg..."
     if timeout 15 ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 "$SOURCE" &>/dev/null; then
@@ -195,32 +195,32 @@ fi
 build_ffmpeg_command() {
     local input_params=""
     local output_params=""
-    
+
     # INPUT PARAMETERS (before -i)
     # ─────────────────────────────────────────────────────────
-    
+
     # Re-use HTTP connection for TS files
     input_params="$input_params -multiple_requests 1"
     input_params="$input_params -reconnect 1"
     input_params="$input_params -reconnect_streamed 1"
     input_params="$input_params -reconnect_at_eof 1"
     input_params="$input_params -reconnect_delay_max 10"
-    
+
     # TS stream specific settings
     input_params="$input_params -analyzeduration 3000000"
     input_params="$input_params -probesize 3000000"
     input_params="$input_params -fflags +genpts+discardcorrupt+igndts"
-    
+
     # Avoid stalling
     input_params="$input_params -timeout 10000000"
     input_params="$input_params -rw_timeout 10000000"
-    
+
     # Log level
     input_params="$input_params -loglevel info"
-    
+
     # OUTPUT PARAMETERS (after -i)
     # ─────────────────────────────────────────────────────────
-    
+
     # Re-encode video to H.264 and audio to AAC (Facebook requirement)
     output_params="$output_params -c:v $VIDEO_ENCODER"
     output_params="$output_params -preset $PRESET -tune $TUNE"
@@ -229,19 +229,19 @@ build_ffmpeg_command() {
     output_params="$output_params -g $((FPS * KEYINT))"
     output_params="$output_params -keyint_min $((FPS * KEYINT))"
     output_params="$output_params -c:a aac -b:a 128k -ar 44100 -ac 2"
-    
+
     # Output format for RTMP/Facebook
     output_params="$output_params -f flv"
     output_params="$output_params -flvflags no_duration_filesize"
-    
+
     # Sync and timing fixes
     output_params="$output_params -async 1"
     output_params="$output_params -vsync cfr"
     output_params="$output_params -copytb 1"
-    
+
     # Buffer settings
     output_params="$output_params -max_muxing_queue_size 9999"
-    
+
     # Return both parts separated by a marker
     echo "INPUT:$input_params OUTPUT:$output_params"
 }
@@ -260,19 +260,19 @@ display_stream_info() {
     echo -e "${BLUE}FPS:${NC} $FPS"
     echo -e "${BLUE}Bitrate:${NC} $BITRATE (max: $MAXRATE)"
     echo -e "${BLUE}Key Interval:${NC} ${KEYINT}s (every $((FPS * KEYINT)) frames)"
-    
+
     if [ "$AUDIO_CODEC" = "copy" ]; then
         echo -e "${BLUE}Audio:${NC} Stream copy (no re-encoding)"
     else
         echo -e "${BLUE}Audio:${NC} $AUDIO_BITRATE @ ${AUDIO_RATE}Hz"
     fi
-    
+
     echo -e "${BLUE}Encoder:${NC} $VIDEO_ENCODER"
-    
+
     if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
         echo -e "${BLUE}Logo:${NC} Enabled ($LOGO_POSITION)"
     fi
-    
+
     echo -e "${BLUE}Source:${NC} $SOURCE"
     log_info "========================================"
     echo ""
@@ -285,28 +285,28 @@ display_stream_info() {
 start_stream() {
     log_info "Stopping any previous session..."
     tmux kill-session -t "$SESSION_NAME" 2>/dev/null || true
-    
+
     log_info "Building FFmpeg command..."
     local FFMPEG_CMD=$(build_ffmpeg_command)
-    
+
     # Split input and output parameters
     local INPUT_PARAMS="${FFMPEG_CMD#*INPUT:}"
     INPUT_PARAMS="${INPUT_PARAMS%%OUTPUT:*}"
     local OUTPUT_PARAMS="${FFMPEG_CMD#*OUTPUT:}"
-    
+
     display_stream_info
-    
+
     # Build complete command
     RTMP_URL="${RTMP_SERVER}${FB_STREAM_KEY}"
-    
+
     local LOG_FILE=""
     if [ "$LOG_ENABLED" = "true" ]; then
         LOG_FILE="$LOG_DIR/stream_$(date +%Y%m%d_%H%M%S).log"
         touch "$LOG_FILE"
     fi
-    
+
     log_info "Starting stream..."
-    
+
     # Create temporary script to run inside tmux
     local TEMP_SCRIPT="/tmp/fbstream_$$.sh"
     cat > "$TEMP_SCRIPT" << EOFSCRIPT
@@ -330,19 +330,19 @@ echo "Starting FFmpeg..."
 ffmpeg $INPUT_PARAMS -i "$SOURCE" $OUTPUT_PARAMS "$RTMP_URL"
 EOFSCRIPT
     fi
-    
+
     chmod +x "$TEMP_SCRIPT"
-    
+
     # Create tmux session and run script
     tmux new-session -d -s "$SESSION_NAME" "$TEMP_SCRIPT"
-    
+
     # Wait and verify session started
     sleep 1
-    
+
     local attempt=0
     local max_attempts=5
     local session_started=false
-    
+
     while [ $attempt -lt $max_attempts ]; do
         if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
             session_started=true
@@ -351,11 +351,11 @@ EOFSCRIPT
         sleep 1
         attempt=$((attempt + 1))
     done
-    
+
     if [ "$session_started" = true ]; then
         # Wait a bit more and check if FFmpeg is actually running
         sleep 3
-        
+
         if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
             log_success "Stream started successfully!"
             echo ""
@@ -425,14 +425,14 @@ main() {
     log_info "Facebook Live Stream"
     log_info "========================================"
     echo ""
-    
+
     check_requirements
     check_internet
     check_stream_key
     check_source
     setup_logs
     start_stream
-    
+
     echo ""
     log_success "Done!"
     echo ""

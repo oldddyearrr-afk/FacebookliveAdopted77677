@@ -69,15 +69,25 @@ def api_start():
             import time
             time.sleep(2)
         
-        # Start stream
+        # Start stream directly using main.sh in background
+        # This avoids the issue with control.sh waiting
         subprocess.Popen(
-            ['bash', 'control.sh', 'start'],
+            ['bash', '-c', 'source config.sh && bash main.sh &'],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            start_new_session=True
+            start_new_session=True,
+            cwd=os.path.dirname(os.path.abspath(__file__))
         )
         
-        return jsonify({'success': True, 'message': 'Stream started'})
+        # Give it a moment to start
+        import time
+        time.sleep(3)
+        
+        # Verify it started
+        if get_stream_status():
+            return jsonify({'success': True, 'message': 'Stream started'})
+        else:
+            return jsonify({'success': False, 'error': 'Stream failed to start - check secrets and config'}), 500
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
