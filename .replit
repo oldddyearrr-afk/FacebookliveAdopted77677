@@ -12,7 +12,7 @@ deploymentTarget = "cloudrun"
 expertMode = true
 
 [workflows]
-runButton = "Project"
+runButton = "Web UI"
 
 [[workflows.workflow]]
 name = "Project"
@@ -33,6 +33,15 @@ args = "bash quick_start.sh"
 
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow]]
+name = "Web UI"
+author = 49759065
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3 web_app.py"
 
 [[ports]]
 localPort = 5000
