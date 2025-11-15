@@ -380,6 +380,16 @@ EOFSCRIPT
             echo -e "  - Source URL validity"
             echo -e "  - Internet connection"
             echo -e "  - Logs: ${GREEN}./control.sh logs${NC}"
+            echo ""
+            log_info "Keeping stream alive... Press Ctrl+C to stop"
+            echo ""
+            
+            # Keep the process alive by monitoring the tmux session
+            while tmux has-session -t "$SESSION_NAME" 2>/dev/null; do
+                sleep 5
+            done
+            
+            log_warning "Stream session ended"
         else
             log_error "Stream session died immediately after starting!"
             echo ""
