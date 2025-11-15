@@ -19,8 +19,9 @@ echo -e "${YELLOW}الخطوة 1: استخراج رابط البث${NC}"
 echo "  الأمر: ./extract_link.sh"
 echo ""
 
-echo -e "${YELLOW}الخطوة 2: ضبط مفتاح البث${NC}"
-echo "  الأمر: export FB_STREAM_KEY='مفتاحك_هنا'"
+echo -e "${YELLOW}الخطوة 2: إضافة مفتاح البث في Replit Secrets${NC}"
+echo "  1. افتح تبويب Secrets (🔒)"
+echo "  2. أضف: FB_STREAM_KEY = مفتاحك"
 echo ""
 
 echo -e "${YELLOW}الخطوة 3: بدء البث${NC}"

@@ -73,15 +73,22 @@ start_stream() {
     if [ -n "$stream_key" ]; then
         export FB_STREAM_KEY="$stream_key"
         log_success "Using provided stream key"
+    elif [ -z "$FB_STREAM_KEY" ]; then
+        # محاولة قراءة من Replit Secrets
+        log_info "Reading stream key from Replit Secrets..."
+        FB_STREAM_KEY="${FB_STREAM_KEY}"
     fi
     
     # التحقق من وجود FB_STREAM_KEY
     if [ -z "$FB_STREAM_KEY" ]; then
         log_error "Stream key not found!"
-        log_info "Usage: ./control.sh start YOUR_STREAM_KEY"
+        log_info "Please add FB_STREAM_KEY to Replit Secrets"
+        log_info "Or use: ./control.sh start YOUR_STREAM_KEY"
         return 1
     fi
     
+    export FB_STREAM_KEY
+    log_success "Stream key loaded successfully"
     log_info "Starting stream..."
     bash "$SCRIPT_DIR/main.sh"
 }
