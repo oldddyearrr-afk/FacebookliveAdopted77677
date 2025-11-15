@@ -84,8 +84,9 @@ start_stream() {
     
     if [ "$status" = "running" ]; then
         log_warning "Stream is already running!"
-        log_info "Use 'restart' to restart it"
-        return 1
+        log_info "Restarting stream..."
+        stop_stream
+        sleep 2
     fi
     
     # If stream_key provided as parameter, use it

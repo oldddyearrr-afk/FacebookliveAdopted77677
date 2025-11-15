@@ -55,10 +55,29 @@ case $choice in
         echo ""
         echo -e "${GREEN}Starting stream...${NC}"
         echo ""
-        bash ./control.sh start
+        # Source control.sh functions instead of running as subprocess
+        source ./control.sh start
+        
+        # Keep script alive while stream is running
+        echo ""
+        echo -e "${GREEN}Stream is now running!${NC}"
+        echo -e "${YELLOW}Press Ctrl+C to return to menu${NC}"
+        echo ""
+        
+        # Monitor the stream
+        while tmux has-session -t "${SESSION_NAME:-fbstream}" 2>/dev/null; do
+            sleep 5
+        done
+        
+        echo ""
+        echo -e "${YELLOW}Stream has stopped${NC}"
+        read -p "Press Enter to continue..." 
+        bash ./quick_start.sh
         ;;
     3)
         bash ./control.sh status
+        read -p "Press Enter to continue..." 
+        bash ./quick_start.sh
         ;;
     4)
         echo "Goodbye! 👋"
