@@ -48,8 +48,8 @@ def parse_config():
         'logo_position': 'topright',
         'logo_size': '350:-1',
         'logo_opacity': '0.95',
-        'logo_margin_x': '1',
-        'logo_margin_y': '5',
+        'logo_offset_x': '20',
+        'logo_offset_y': '20',
         'streaming_mode': 'encode'
     }
     
@@ -63,8 +63,8 @@ def parse_config():
                 'logo_position': r'LOGO_POSITION="([^"]+)"',
                 'logo_size': r'LOGO_SIZE="([^"]*)"',
                 'logo_opacity': r'LOGO_OPACITY="([^"]+)"',
-                'logo_margin_x': r'LOGO_MARGIN_X="([^"]+)"',
-                'logo_margin_y': r'LOGO_MARGIN_Y="([^"]+)"',
+                'logo_offset_x': r'LOGO_OFFSET_X="([^"]+)"',
+                'logo_offset_y': r'LOGO_OFFSET_Y="([^"]+)"',
                 'streaming_mode': r'STREAMING_MODE="([^"]+)"'
             }
             
