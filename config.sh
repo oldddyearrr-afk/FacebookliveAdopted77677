@@ -79,8 +79,12 @@ CUSTOM_KEYINT="2"
 
 # Auto reconnect settings
 RECONNECT_ENABLED="true"
-RECONNECT_DELAY_MAX="10"
+RECONNECT_DELAY_MAX="5"
 RECONNECT_ATTEMPTS="-1"  # -1 = unlimited attempts
+
+# Auto restart on failure
+AUTO_RESTART="true"
+RESTART_DELAY="5"  # seconds to wait before restart
 
 # Encoding settings
 PRESET="ultrafast"  # ultrafast, superfast, veryfast, faster, fast, medium, slow

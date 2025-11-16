@@ -255,6 +255,11 @@ attach_stream() {
 # Show help
 # ═══════════════════════════════════════════════════════════
 
+start_with_monitor() {
+    log_info "Starting stream with auto-monitor..."
+    bash "$SCRIPT_DIR/start_with_monitor.sh"
+}
+
 show_help() {
     print_header
     echo -e "${CYAN}Usage:${NC}"
@@ -263,6 +268,7 @@ show_help() {
     echo -e "${CYAN}Available Commands:${NC}"
     echo ""
     echo -e "  ${GREEN}start${NC} ${YELLOW}[key]${NC}  - Start streaming (optional: provide stream key)"
+    echo -e "  ${GREEN}monitor${NC}      - Start with auto-restart on failure ⭐"
     echo -e "  ${GREEN}stop${NC}         - Stop streaming"
     echo -e "  ${GREEN}restart${NC}      - Restart streaming"
     echo -e "  ${GREEN}status${NC}       - Show stream status"
@@ -273,9 +279,10 @@ show_help() {
     echo -e "${CYAN}Setup Instructions:${NC}"
     echo -e "  ${YELLOW}1.${NC} Add ${GREEN}FB_STREAM_KEY${NC} to Replit Secrets (🔒 icon)"
     echo -e "  ${YELLOW}2.${NC} Configure ${GREEN}SOURCE${NC} URL in config.sh"
-    echo -e "  ${YELLOW}3.${NC} Run: ${GREEN}./control.sh start${NC}"
+    echo -e "  ${YELLOW}3.${NC} Run: ${GREEN}./control.sh monitor${NC} (recommended)"
     echo ""
     echo -e "${CYAN}Examples:${NC}"
+    echo -e "  ./control.sh monitor                  ${BLUE}# Start with auto-restart ⭐${NC}"
     echo -e "  ./control.sh start                    ${BLUE}# Use FB_STREAM_KEY from Secrets${NC}"
     echo -e "  ./control.sh start YOUR_KEY_HERE      ${BLUE}# Use provided stream key${NC}"
     echo -e "  ./control.sh status                   ${BLUE}# Check stream status${NC}"
@@ -333,6 +340,10 @@ main() {
         start)
             print_header
             start_stream "${2:-}"
+            ;;
+        monitor)
+            print_header
+            start_with_monitor
             ;;
         stop)
             print_header

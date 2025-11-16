@@ -205,12 +205,14 @@ build_ffmpeg_command() {
     input_params="$input_params -reconnect 1"
     input_params="$input_params -reconnect_streamed 1"
     input_params="$input_params -reconnect_at_eof 1"
+    input_params="$input_params -reconnect_on_network_error 1"
+    input_params="$input_params -reconnect_on_http_error 4xx,5xx"
     input_params="$input_params -reconnect_delay_max 10"
 
     # TS stream specific settings
-    input_params="$input_params -analyzeduration 3000000"
-    input_params="$input_params -probesize 3000000"
-    input_params="$input_params -fflags +genpts+discardcorrupt+igndts"
+    input_params="$input_params -analyzeduration 5000000"
+    input_params="$input_params -probesize 5000000"
+    input_params="$input_params -fflags +genpts+discardcorrupt+igndts+nobuffer"
 
     # Avoid stalling
     input_params="$input_params -timeout 10000000"
