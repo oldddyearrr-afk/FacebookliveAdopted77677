@@ -96,23 +96,23 @@ AUDIO_RATE="44100"  # Only used if re-encoding
 # ═══════════════════════════════════════════════════════════
 
 # Enable logo overlay
-LOGO_ENABLED="false"  # true or false
+LOGO_ENABLED="true"  # true or false
 
 # Path to logo image file (PNG with transparency recommended)
-LOGO_PATH="logo.png"
+LOGO_PATH="channel_logo.png"
 
 # Logo position: topleft, topright, bottomleft, bottomright
 LOGO_POSITION="topright"
 
 # Logo offset from edges (in pixels)
-LOGO_OFFSET_X="10"
-LOGO_OFFSET_Y="10"
+LOGO_OFFSET_X="20"
+LOGO_OFFSET_Y="20"
 
 # Logo size (leave empty for original size, or specify like "200:100" for WxH)
-LOGO_SIZE=""
+LOGO_SIZE="250:-1"
 
 # Logo opacity (0.0 to 1.0, where 1.0 is fully opaque)
-LOGO_OPACITY="1.0"
+LOGO_OPACITY="0.95"
 
 # ═══════════════════════════════════════════════════════════
 # 5. Performance Settings

@@ -195,6 +195,7 @@ fi
 build_ffmpeg_command() {
     local input_params=""
     local output_params=""
+    local logo_params=""
 
     # INPUT PARAMETERS (before -i)
     # ─────────────────────────────────────────────────────────
@@ -221,6 +222,11 @@ build_ffmpeg_command() {
     # OUTPUT PARAMETERS (after -i)
     # ─────────────────────────────────────────────────────────
 
+    # Add logo overlay if enabled
+    if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
+        logo_params="-i \"$LOGO_PATH\""
+    fi
+
     # Re-encode video to H.264 and audio to AAC (Facebook requirement)
     output_params="$output_params -c:v $VIDEO_ENCODER"
     output_params="$output_params -preset $PRESET -tune $TUNE"
@@ -229,6 +235,14 @@ build_ffmpeg_command() {
     output_params="$output_params -g $((FPS * KEYINT))"
     output_params="$output_params -keyint_min $((FPS * KEYINT))"
     output_params="$output_params -c:a aac -b:a 128k -ar 44100 -ac 2"
+
+    # Add logo filter if enabled
+    if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
+        local logo_filter=$(build_logo_filter)
+        if [ -n "$logo_filter" ]; then
+            output_params="$output_params $logo_filter"
+        fi
+    fi
 
     # Output format for RTMP/Facebook
     output_params="$output_params -f flv"
@@ -243,7 +257,7 @@ build_ffmpeg_command() {
     output_params="$output_params -max_muxing_queue_size 9999"
 
     # Return both parts separated by a marker
-    echo "INPUT:$input_params OUTPUT:$output_params"
+    echo "INPUT:$input_params LOGO:$logo_params OUTPUT:$output_params"
 }
 
 # ═══════════════════════════════════════════════════════════
@@ -289,9 +303,13 @@ start_stream() {
     log_info "Building FFmpeg command..."
     local FFMPEG_CMD=$(build_ffmpeg_command)
 
-    # Split input and output parameters
+    # Split input, logo and output parameters
     local INPUT_PARAMS="${FFMPEG_CMD#*INPUT:}"
-    INPUT_PARAMS="${INPUT_PARAMS%%OUTPUT:*}"
+    INPUT_PARAMS="${INPUT_PARAMS%%LOGO:*}"
+    
+    local LOGO_PARAMS="${FFMPEG_CMD#*LOGO:}"
+    LOGO_PARAMS="${LOGO_PARAMS%%OUTPUT:*}"
+    
     local OUTPUT_PARAMS="${FFMPEG_CMD#*OUTPUT:}"
 
     display_stream_info
@@ -321,13 +339,13 @@ EOFSCRIPT
 echo "Log file: $LOG_FILE"
 echo "========================================"
 echo "Starting FFmpeg..."
-ffmpeg $INPUT_PARAMS -i "$SOURCE" $OUTPUT_PARAMS "$RTMP_URL" 2>&1 | tee -a "$LOG_FILE"
+ffmpeg $INPUT_PARAMS -i "$SOURCE" $LOGO_PARAMS $OUTPUT_PARAMS "$RTMP_URL" 2>&1 | tee -a "$LOG_FILE"
 EOFSCRIPT
     else
         cat >> "$TEMP_SCRIPT" << EOFSCRIPT
 echo "========================================"
 echo "Starting FFmpeg..."
-ffmpeg $INPUT_PARAMS -i "$SOURCE" $OUTPUT_PARAMS "$RTMP_URL"
+ffmpeg $INPUT_PARAMS -i "$SOURCE" $LOGO_PARAMS $OUTPUT_PARAMS "$RTMP_URL"
 EOFSCRIPT
     fi
 
