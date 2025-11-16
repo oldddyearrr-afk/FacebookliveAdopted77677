@@ -77,14 +77,14 @@ CUSTOM_KEYINT="2"
 # 3. Advanced Settings
 # ═══════════════════════════════════════════════════════════
 
-# Auto reconnect settings
+# Auto reconnect settings (optimized for fast connection)
 RECONNECT_ENABLED="true"
-RECONNECT_DELAY_MAX="5"
-RECONNECT_ATTEMPTS="-1"  # -1 = unlimited attempts
+RECONNECT_DELAY_MAX="2"  # Fast reconnect delay
+RECONNECT_ATTEMPTS="-1"  # Unlimited attempts for reliability
 
 # Auto restart on failure
 AUTO_RESTART="true"
-RESTART_DELAY="5"  # seconds to wait before restart
+RESTART_DELAY="3"  # Reduced from 5 to 3 seconds
 
 # Encoding settings
 PRESET="ultrafast"  # ultrafast, superfast, veryfast, faster, fast, medium, slow
@@ -152,6 +152,12 @@ SESSION_NAME="fbstream"
 LOG_DIR="logs"
 LOG_ENABLED="true"
 LOG_LEVEL="info"  # quiet, panic, fatal, error, warning, info, verbose, debug
+
+# ═══════════════════════════════════════════════════════════
+# 8. Status File for API Integration
+# ═══════════════════════════════════════════════════════════
+
+STATUS_FILE="/tmp/fbstream_status.txt"
 
 # ═══════════════════════════════════════════════════════════
 # Function: Get Quality Settings

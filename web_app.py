@@ -9,6 +9,8 @@ from datetime import datetime
 
 app = Flask(__name__)
 
+STATUS_FILE = "/tmp/fbstream_status.txt"
+
 def get_stream_status():
     """Check if stream is running"""
     try:
@@ -20,6 +22,23 @@ def get_stream_status():
         return result.returncode == 0
     except:
         return False
+
+def get_detailed_status():
+    """Get detailed stream status from status file"""
+    try:
+        if os.path.exists(STATUS_FILE):
+            with open(STATUS_FILE, 'r') as f:
+                content = f.read().strip()
+                parts = content.split('|')
+                if len(parts) >= 2:
+                    return {
+                        'state': parts[0],
+                        'message': parts[1],
+                        'timestamp': int(parts[2]) if len(parts) > 2 else None
+                    }
+        return {'state': 'UNKNOWN', 'message': 'No status file', 'timestamp': None}
+    except Exception as e:
+        return {'state': 'ERROR', 'message': str(e), 'timestamp': None}
 
 def parse_config():
     """Parse config.sh to get logo settings"""
@@ -102,38 +121,51 @@ def api_status():
 
 @app.route('/api/start', methods=['POST'])
 def api_start():
+    import time
     try:
-        # Clean up old logs before starting
-        if os.path.exists('cleanup_logs.sh'):
-            subprocess.run(['bash', 'cleanup_logs.sh'], check=False, 
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        
-        # Check if already running
+        # Check if already running and stop it immediately
         if get_stream_status():
-            # Stop first
-            subprocess.run(['bash', 'control.sh', 'stop'], check=False)
-            import time
-            time.sleep(2)
+            subprocess.run(['tmux', 'kill-session', '-t', 'fbstream'], 
+                         check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(0.5)
         
-        # Start stream directly using main.sh in background
-        # This avoids the issue with control.sh waiting
-        subprocess.Popen(
-            ['bash', '-c', 'source config.sh && bash main.sh &'],
+        # Clear old status file
+        if os.path.exists(STATUS_FILE):
+            os.remove(STATUS_FILE)
+        
+        # Clean up old logs in background (non-blocking)
+        if os.path.exists('cleanup_logs.sh'):
+            subprocess.Popen(['bash', 'cleanup_logs.sh'], 
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+        # Start stream directly using main.sh (inherit stdio to avoid buffer blocking)
+        process = subprocess.Popen(
+            ['bash', 'main.sh'],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
-            cwd=os.path.dirname(os.path.abspath(__file__))
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            env=os.environ.copy()
         )
         
-        # Give it a moment to start
-        import time
-        time.sleep(3)
+        # Wait for status file to report STREAMING or FAILED (max 20 seconds)
+        for i in range(40):
+            time.sleep(0.5)
+            status = get_detailed_status()
+            
+            if status['state'] == 'STREAMING':
+                return jsonify({'success': True, 'message': 'Stream started successfully'})
+            elif status['state'] == 'FAILED':
+                return jsonify({'success': False, 'error': status['message']}), 500
         
-        # Verify it started
-        if get_stream_status():
+        # Timeout: check final state
+        final_status = get_detailed_status()
+        if final_status['state'] == 'STREAMING':
             return jsonify({'success': True, 'message': 'Stream started'})
         else:
-            return jsonify({'success': False, 'error': 'Stream failed to start - check secrets and config'}), 500
+            error_msg = final_status.get('message', 'Timeout waiting for stream') if final_status['state'] != 'UNKNOWN' else 'Stream startup timed out'
+            return jsonify({'success': False, 'error': error_msg}), 500
+            
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
