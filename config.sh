@@ -9,7 +9,7 @@
 # ═══════════════════════════════════════════════════════════
 
 # Facebook Live Stream URL (DASH format)
-SOURCE="http://mydroon.com:80/live/Wakrim70:b1:3d:b1:07:0a/BoYmj6FLljGXvqU/75228.ts"
+SOURCE="https://prod-fastly-eu-central-1.video.pscp.tv:443/Transcoding/v1/hls/46nxSDfa09rMtUJJ6VazshhCx_5sR7TrQpzts5pQUjzlyQeTJTkEUdOnTbKebirVBwzBUu39k5AuEKp2cAVWSQ/transcode/eu-central-1/periscope-replay-direct-prod-eu-central-1-public/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsInZlcnNpb24iOiIyIn0.eyJFbmNvZGVyU2V0dGluZyI6ImVuY29kZXJfc2V0dGluZ18xMDgwcDMwXzEwIiwiSGVpZ2h0IjoxMDgwLCJLYnBzIjo1NTAwLCJXaWR0aCI6MTkyMH0.OImMZabKYJ0cs9CnIapU-4aBk6KNBiJxi1hh-6l4BZ4/dynamic_highlatency.m3u8?type=live"
 
 # RTMP server for Facebook (Stream Key is fetched from environment variables for security)
 RTMP_SERVER="rtmps://live-api-s.facebook.com:443/rtmp/"
@@ -102,7 +102,7 @@ AUDIO_RATE="44100"  # Only used if re-encoding
 # STREAMING_MODE: "copy" or "encode"
 # - "copy": Stream copy (fast, no CPU, original quality, NO LOGO) ⚡
 # - "encode": Re-encode with logo overlay (uses CPU, allows logo) 🎨
-STREAMING_MODE="copy"
+STREAMING_MODE="encode"
 
 # ═══════════════════════════════════════════════════════════
 # 4. Logo/Watermark Settings
