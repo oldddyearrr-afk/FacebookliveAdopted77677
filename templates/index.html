@@ -419,7 +419,9 @@
                 }
                 
                 logoStatus.innerHTML = '<span class="status-badge enabled">مفعّل ✓</span>';
-                logoPositionText.textContent = getPositionArabic(config.logo_position);
+                const positionText = getPositionArabic(config.logo_position);
+                const marginText = `(${config.logo_margin_x}% أفقي، ${config.logo_margin_y}% عمودي)`;
+                logoPositionText.textContent = `${positionText} ${marginText}`;
                 logoSizeText.textContent = config.logo_size || 'الحجم الأصلي';
                 logoOpacityText.textContent = `${parseFloat(config.logo_opacity) * 100}%`;
                 
@@ -427,31 +429,31 @@
                 logoImg.style.display = 'block';
                 logoImg.style.opacity = config.logo_opacity;
                 
-                const offsetX = config.logo_offset_x || '20';
-                const offsetY = config.logo_offset_y || '20';
+                const marginX = config.logo_margin_x || '1';
+                const marginY = config.logo_margin_y || '5';
                 
                 switch (config.logo_position) {
                     case 'topleft':
-                        logoImg.style.top = offsetY + 'px';
-                        logoImg.style.left = offsetX + 'px';
+                        logoImg.style.top = marginY + '%';
+                        logoImg.style.left = marginX + '%';
                         logoImg.style.right = 'auto';
                         logoImg.style.bottom = 'auto';
                         break;
                     case 'topright':
-                        logoImg.style.top = offsetY + 'px';
-                        logoImg.style.right = offsetX + 'px';
+                        logoImg.style.top = marginY + '%';
+                        logoImg.style.right = marginX + '%';
                         logoImg.style.left = 'auto';
                         logoImg.style.bottom = 'auto';
                         break;
                     case 'bottomleft':
-                        logoImg.style.bottom = offsetY + 'px';
-                        logoImg.style.left = offsetX + 'px';
+                        logoImg.style.bottom = marginY + '%';
+                        logoImg.style.left = marginX + '%';
                         logoImg.style.right = 'auto';
                         logoImg.style.top = 'auto';
                         break;
                     case 'bottomright':
-                        logoImg.style.bottom = offsetY + 'px';
-                        logoImg.style.right = offsetX + 'px';
+                        logoImg.style.bottom = marginY + '%';
+                        logoImg.style.right = marginX + '%';
                         logoImg.style.left = 'auto';
                         logoImg.style.top = 'auto';
                         break;
