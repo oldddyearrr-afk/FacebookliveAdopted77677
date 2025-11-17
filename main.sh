@@ -120,21 +120,13 @@ check_internet() {
 # ═══════════════════════════════════════════════════════════
 
 check_stream_key() {
-    log_info "Checking stream key..."
-
+    # Stream key is now passed via environment from web UI
     if [ -z "$FB_STREAM_KEY" ]; then
-        log_error "Stream key not found!"
-        log_warning "Please set environment variable: FB_STREAM_KEY"
-        log_info "Example: export FB_STREAM_KEY='your-stream-key-here'"
+        log_error "Stream key not provided!"
         exit 1
     fi
-
-    if [ "$FB_STREAM_KEY" = "YOUR_STREAM_KEY_HERE" ]; then
-        log_error "Please change stream key from default value"
-        exit 1
-    fi
-
-    log_success "Stream key found"
+    
+    log_success "Stream key received"
 }
 
 # ═══════════════════════════════════════════════════════════

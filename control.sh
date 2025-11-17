@@ -28,21 +28,7 @@ print_header() {
 }
 
 check_secrets_env() {
-    if [ -z "$FB_STREAM_KEY" ]; then
-        log_error "FB_STREAM_KEY not found in environment!"
-        echo ""
-        log_info "📌 How to fix this:"
-        echo -e "  ${YELLOW}1.${NC} Click on the Lock icon (🔒) in the left sidebar"
-        echo -e "  ${YELLOW}2.${NC} Add a new Secret:"
-        echo -e "     ${GREEN}Key:${NC} FB_STREAM_KEY"
-        echo -e "     ${GREEN}Value:${NC} [Your Facebook Stream Key]"
-        echo -e "  ${YELLOW}3.${NC} Get your stream key from Facebook Creator Studio"
-        echo ""
-        log_info "Or provide it as a parameter:"
-        echo -e "  ${GREEN}./control.sh start YOUR_STREAM_KEY${NC}"
-        echo ""
-        return 1
-    fi
+    # Stream key is now provided via web UI
     return 0
 }
 
