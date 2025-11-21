@@ -125,7 +125,7 @@ LOGO_POSITION="topright"
 # اللوجو سيظهر ملتصق بالحافة العليا، فوق شعار beIN SPORTS ✅
 # بعد 5 بكسل فقط من الحافة اليمنى، و 5 بكسل من الحافة العليا
 #
-LOGO_OFFSET_X="-22"     # 5 بكسل من الحافة اليمنى (ملتصق تقريباً)
+LOGO_OFFSET_X="-20"     # 5 بكسل من الحافة اليمنى (ملتصق تقريباً)
 LOGO_OFFSET_Y="-36"     # 5 بكسل من الحافة العليا (ملتصق تقريباً)
 
 # Logo size (leave empty for original size, or specify like "200:100" for WxH)
