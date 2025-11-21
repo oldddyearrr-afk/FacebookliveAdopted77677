@@ -9,7 +9,7 @@
 # ═══════════════════════════════════════════════════════════
 
 # Facebook Live Stream URL (DASH format)
-SOURCE="http://soft24f.net/live/6872c3410e8cibopro/22bcpapc/55414.ts"
+SOURCE="http://soft24f.net/live/6872c3410e8cibopro/22bcpapc/7755.ts"
 
 # RTMP server for Facebook (Stream Key is fetched from environment variables for security)
 RTMP_SERVER="rtmps://live-api-s.facebook.com:443/rtmp/"
@@ -125,8 +125,8 @@ LOGO_POSITION="topright"
 # اللوجو سيظهر ملتصق بالحافة العليا، فوق شعار beIN SPORTS ✅
 # بعد 5 بكسل فقط من الحافة اليمنى، و 5 بكسل من الحافة العليا
 #
-LOGO_OFFSET_X="-20"     # 5 بكسل من الحافة اليمنى (ملتصق تقريباً)
-LOGO_OFFSET_Y="-36"     # 5 بكسل من الحافة العليا (ملتصق تقريباً)
+LOGO_OFFSET_X="-18"     # 5 بكسل من الحافة اليمنى (ملتصق تقريباً)
+LOGO_OFFSET_Y="-34"     # 5 بكسل من الحافة العليا (ملتصق تقريباً)
 
 # Logo size (leave empty for original size, or specify like "200:100" for WxH)
 # Example: "350:-1" = 350px width, maintain aspect ratio
