@@ -13,7 +13,7 @@ LOG_FILE = "stream_bot.log"
 # 🎨 LOGO SETTINGS - اعدادات اللوجو
 # ═══════════════════════════════════════════════════════════
 
-LOGO_OFFSET_X = "-27"
-LOGO_OFFSET_Y = "-36"
-LOGO_SIZE = "480:-1"
+LOGO_OFFSET_X = "-16"
+LOGO_OFFSET_Y = "-8"
+LOGO_SIZE = "370:-1"
 LOGO_OPACITY = "1.0"
