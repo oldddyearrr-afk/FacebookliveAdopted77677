@@ -1,7 +1,7 @@
 import subprocess
 import logging
 import config
-from config import LOGO_POSITION, parse_logo_position
+from config import LOGO_OFFSET_X, LOGO_OFFSET_Y, LOGO_SIZE, LOGO_OPACITY
 import os
 import time
 import threading
@@ -108,10 +108,13 @@ verifyChain = no
         
         if logo_path and os.path.exists(logo_path):
             command.extend(['-i', logo_path])
-            # Use parse_logo_position to convert simple xp format to FFmpeg format
-            overlay_pos = parse_logo_position(LOGO_POSITION)
+            # Build FFmpeg filter with logo positioning, size, and opacity
+            x_offset = LOGO_OFFSET_X
+            y_offset = LOGO_OFFSET_Y
+            overlay_pos = f"main_w-overlay_w{x_offset}:{y_offset}"
+            filter_complex = f"[1:v]format=rgba,scale={LOGO_SIZE},split[logo1][logo2];[logo1]alphaextract,curves=all=0/{LOGO_OPACITY}[alpha];[logo2][alpha]alphamerge[logo_final];[0:v][logo_final]overlay={overlay_pos}[outv]"
             command.extend([
-                '-filter_complex', f'[1:v]format=rgba,scale=480:-1[logo];[0:v][logo]overlay={overlay_pos}[outv]',
+                '-filter_complex', filter_complex,
                 '-map', '[outv]',
                 '-map', '0:a?',
             ])
