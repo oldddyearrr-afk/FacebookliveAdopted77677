@@ -79,23 +79,20 @@ verifyChain = no
         command = [
             config.FFMPEG_CMD,
             '-hide_banner',
-            '-loglevel', 'warning',
+            '-loglevel', 'info',
             
             '-reconnect', '1',
             '-reconnect_streamed', '1',
             '-reconnect_at_eof', '1',
             '-reconnect_delay_max', '5',
-            '-reconnect_on_network_error', '1',
-            '-reconnect_on_http_error', '4xx,5xx',
             
-            '-rw_timeout', '15000000',
-            '-timeout', '15000000',
-            '-analyzeduration', '3000000',
-            '-probesize', '5000000',
-            '-fflags', '+genpts+discardcorrupt',
-            '-flags', 'low_delay',
+            '-rw_timeout', '20000000',
+            '-timeout', '20000000',
+            '-analyzeduration', '5000000',
+            '-probesize', '10000000',
+            '-fflags', '+genpts',
             
-            '-headers', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\r\nOrigin: https://twitter.com\r\nReferer: https://twitter.com/\r\n',
+            '-headers', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\nOrigin: https://twitter.com\r\nReferer: https://twitter.com/\r\n',
             
             '-i', m3u8_url,
         ]
@@ -103,32 +100,39 @@ verifyChain = no
         if logo_path and os.path.exists(logo_path):
             command.extend(['-i', logo_path])
             command.extend([
-                '-filter_complex', '[1:v]format=rgba[logo];[0:v][logo]overlay=W-w-10:10[outv]',
+                '-filter_complex', '[1:v]format=rgba,scale=100:-1[logo];[0:v][logo]overlay=W-w-20:20[outv]',
                 '-map', '[outv]',
+                '-map', '0:a',
+            ])
+        else:
+            command.extend([
+                '-map', '0:v',
                 '-map', '0:a',
             ])
         
         command.extend([
             '-c:v', 'libx264',
-            '-preset', 'superfast',
+            '-preset', 'veryfast',
             '-tune', 'zerolatency',
-            '-profile:v', 'high',
-            '-level', '4.2',
+            '-profile:v', 'main',
+            '-level', '4.1',
             '-pix_fmt', 'yuv420p',
             
-            '-b:v', '4500k',
-            '-maxrate', '5000k',
-            '-bufsize', '3000k',
+            '-r', '30',
+            '-vsync', 'cfr',
+            
+            '-b:v', '4000k',
+            '-maxrate', '4500k',
+            '-bufsize', '8000k',
             '-g', '60',
-            '-keyint_min', '60',
-            '-sc_threshold', '0',
+            '-keyint_min', '30',
             
             '-c:a', 'aac',
             '-b:a', '128k',
             '-ar', '44100',
             '-ac', '2',
             
-            '-max_muxing_queue_size', '1024',
+            '-max_muxing_queue_size', '2048',
             '-f', 'flv',
             '-flvflags', 'no_duration_filesize',
             
@@ -203,18 +207,23 @@ verifyChain = no
         logger.info(f"Stream Key: {stream_key[:15]}...")
         
         try:
+            log_file = open('/tmp/ffmpeg_output.log', 'w')
             self.process = subprocess.Popen(
                 command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                stdout=log_file,
+                stderr=subprocess.STDOUT
             )
             
-            time.sleep(10)
+            logger.info(f"FFmpeg بدأ بـ PID: {self.process.pid}")
+            logger.info(f"الأمر: {' '.join(command[:10])}...")
+            
+            time.sleep(8)
             
             if self.process.poll() is not None:
                 stderr = ""
                 try:
-                    stderr = self.process.stderr.read().decode('utf-8', errors='ignore')
+                    with open('/tmp/ffmpeg_output.log', 'r') as f:
+                        stderr = f.read()
                 except:
                     pass
                 
