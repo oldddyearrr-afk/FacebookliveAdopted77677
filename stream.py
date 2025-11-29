@@ -97,8 +97,9 @@ verifyChain = no
             '-timeout', '30000000',
             '-analyzeduration', '10000000',
             '-probesize', '20000000',
-            '-fflags', '+genpts+igndts',
-            '-err_detect', 'ignore_err',
+            '-fflags', '+genpts+igndts+discardcorrupt',
+            '-err_detect', 'ignore_err+aggressive',
+            '-nobuffer',
             
             '-headers', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n',
             
@@ -120,32 +121,33 @@ verifyChain = no
         
         command.extend([
             '-c:v', 'libx264',
-            '-preset', 'veryfast',
+            '-preset', 'ultrafast',
             '-tune', 'zerolatency',
-            '-profile:v', 'main',
-            '-level', '4.1',
+            '-profile:v', 'baseline',
+            '-level', '3.0',
             '-pix_fmt', 'yuv420p',
             
             '-r', '30',
             '-fps_mode', 'cfr',
             
-            '-b:v', '4000k',
-            '-maxrate', '4500k',
-            '-bufsize', '12000k',
-            '-g', '60',
-            '-keyint_min', '30',
-            '-x264opts', 'no-scenecut',
+            '-b:v', '3500k',
+            '-maxrate', '4000k',
+            '-bufsize', '6000k',
+            '-g', '30',
+            '-keyint_min', '15',
+            '-x264opts', 'no-scenecut:aq-mode=0',
             
             '-c:a', 'aac',
-            '-b:a', '128k',
+            '-b:a', '96k',
             '-ar', '44100',
             '-ac', '2',
-            '-async', '1',
+            '-async', '2',
             
-            '-max_muxing_queue_size', '4096',
-            '-thread_queue_size', '1024',
+            '-max_muxing_queue_size', '1024',
+            '-thread_queue_size', '256',
+            '-fflags', '+nobuffer+low_delay',
             '-f', 'flv',
-            '-flvflags', 'no_duration_filesize',
+            '-flvflags', 'no_duration_filesize+no_delay',
             
             rtmp_url
         ])
