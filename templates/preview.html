@@ -9,16 +9,16 @@
         body { background: #1a1a1a; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; display: flex; gap: 20px; }
         .preview { flex: 1; }
-        .controls { width: 280px; background: #222; padding: 20px; border-radius: 8px; }
+        .controls { width: 280px; background: #222; padding: 20px; border-radius: 8px; height: fit-content; }
         .preview-box { background: #000; border: 2px solid #444; aspect-ratio: 16/9; position: relative; overflow: hidden; border-radius: 8px; }
-        .stream-bg { width: 100%; height: 100%; background: linear-gradient(135deg, #1e3c72, #2a5298); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.3); font-size: 20px; }
-        .logo { position: absolute; width: 150px; }
+        video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .logo { position: absolute; width: 150px; top: 0; right: 0; }
         .logo img { width: 100%; height: auto; }
         .control-group { margin-bottom: 15px; }
         label { display: block; font-size: 11px; color: #aaa; margin-bottom: 5px; font-weight: bold; }
         input { width: 100%; padding: 8px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; }
         input:focus { outline: none; border-color: #66bb6a; }
-        .value { font-size: 11px; color: #66bb6a; margin-top: 3px; }
+        .value { font-size: 11px; color: #66bb6a; margin-top: 3px; font-weight: bold; }
         .info { background: #2a2a2a; border-left: 3px solid #66bb6a; padding: 10px; margin-top: 15px; font-size: 10px; line-height: 1.5; }
         @media (max-width: 768px) { .container { flex-direction: column; } .controls { width: 100%; } }
     </style>
@@ -26,9 +26,11 @@
 <body>
     <div class="container">
         <div class="preview">
-            <h2 style="margin-bottom: 15px;">🎬 معاينة اللوجو على البث</h2>
+            <h2 style="margin-bottom: 15px;">🎬 معاينة اللوجو على الفيديو</h2>
             <div class="preview-box">
-                <div class="stream-bg">📺 شاشة البث</div>
+                <video autoplay loop muted playsinline>
+                    <source src="/static/preview_video.mp4" type="video/mp4">
+                </video>
                 <div class="logo" id="logoPreview">
                     <img src="/static/logo.png" alt="Logo" style="width: 100%; height: auto;">
                 </div>
@@ -40,14 +42,16 @@
             
             <div class="control-group">
                 <label>الموضع الأفقي (X)</label>
-                <input type="number" id="offsetX" min="-200" max="200" value="0">
+                <input type="number" id="offsetX" min="-200" max="200">
                 <div class="value" id="valueX">0px</div>
+                <small style="color: #666; font-size: 9px;">سالب = يمين | موجب = يسار</small>
             </div>
             
             <div class="control-group">
                 <label>الموضع العمودي (Y)</label>
-                <input type="number" id="offsetY" min="-200" max="200" value="0">
+                <input type="number" id="offsetY" min="-200" max="200">
                 <div class="value" id="valueY">0px</div>
+                <small style="color: #666; font-size: 9px;">سالب = فوق | موجب = تحت</small>
             </div>
             
             <div class="control-group">
@@ -63,8 +67,10 @@
             </div>
             
             <div class="info">
-                <strong>✅ التغييرات تظهر فوراً</strong><br>
-                انسخ الأرقام واذهب إلى config.py لحفظها
+                <strong>✅ التغييرات تظهر فوراً</strong><br><br>
+                📋 انسخ الأرقام:<br>
+                <code id="copyText" style="display: block; margin-top: 8px; padding: 8px; background: #1a1a1a; border-radius: 3px; font-family: monospace; font-size: 9px;"></code>
+                <button onclick="copyToClipboard()" style="width: 100%; margin-top: 8px; padding: 6px; background: #66bb6a; color: #000; border: none; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold;">📋 انسخ</button>
             </div>
         </div>
     </div>
@@ -75,10 +81,22 @@
         const offsetYInput = document.getElementById('offsetY');
         const sizeInput = document.getElementById('logoSize');
         const opacityInput = document.getElementById('opacity');
+        const copyText = document.getElementById('copyText');
+
+        // Set initial values from config
+        fetch('/api/config')
+            .then(r => r.json())
+            .then(data => {
+                offsetXInput.value = data.offset_x.replace(/['"]/g, '');
+                offsetYInput.value = data.offset_y.replace(/['"]/g, '');
+                sizeInput.value = 150;
+                update();
+            })
+            .catch(() => update());
 
         function update() {
-            const x = parseInt(offsetXInput.value);
-            const y = parseInt(offsetYInput.value);
+            const x = parseInt(offsetXInput.value) || 0;
+            const y = parseInt(offsetYInput.value) || 0;
             const size = parseInt(sizeInput.value);
             const opacity = parseInt(opacityInput.value) / 100;
             
@@ -87,18 +105,27 @@
             logo.style.top = y + 'px';
             logo.style.opacity = opacity;
             
-            document.getElementById('valueX').textContent = x + 'px (LOGO_OFFSET_X = "' + x + '")';
-            document.getElementById('valueY').textContent = y + 'px (LOGO_OFFSET_Y = "' + y + '")';
+            document.getElementById('valueX').textContent = x + 'px';
+            document.getElementById('valueY').textContent = y + 'px';
             document.getElementById('valueSize').textContent = size + 'px';
             document.getElementById('valueOpacity').textContent = opacity * 100 + '%';
+            
+            copyText.textContent = `LOGO_OFFSET_X = "${x}"\nLOGO_OFFSET_Y = "${y}"`;
+        }
+
+        function copyToClipboard() {
+            const x = offsetXInput.value;
+            const y = offsetYInput.value;
+            const text = `LOGO_OFFSET_X = "${x}"\nLOGO_OFFSET_Y = "${y}"`;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ تم النسخ!');
+            });
         }
 
         offsetXInput.addEventListener('input', update);
         offsetYInput.addEventListener('input', update);
         sizeInput.addEventListener('input', update);
         opacityInput.addEventListener('input', update);
-        
-        update();
     </script>
 </body>
 </html>
