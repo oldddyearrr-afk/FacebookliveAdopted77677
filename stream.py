@@ -5,6 +5,7 @@ import config
 import os
 import time
 import threading
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +35,9 @@ class StreamManager:
                 consecutive_failures += 1
                 self.reconnect_attempts += 1
                 
-                logger.warning(f"❌ البث توقف! (المحاولة {self.reconnect_attempts}/{self.max_reconnect_attempts})")
-                logger.warning(f"❌ فشل متتالي: {consecutive_failures}")
+                logger.warning(f"البث توقف! (المحاولة {self.reconnect_attempts}/{self.max_reconnect_attempts})")
+                logger.warning(f"فشل متتالي: {consecutive_failures}")
                 
-                # قراءة أخطاء FFmpeg
                 if self.process.stderr:
                     try:
                         stderr_output = self.process.stderr.read()
@@ -47,21 +47,19 @@ class StreamManager:
                         pass
                 
                 if self.reconnect_attempts >= self.max_reconnect_attempts:
-                    logger.error("❌ تم الوصول للحد الأقصى من محاولات إعادة الاتصال")
+                    logger.error("تم الوصول للحد الأقصى من محاولات إعادة الاتصال")
                     self.is_running = False
                     break
                 
-                # انتظار تصاعدي (exponential backoff)
                 wait_time = min(2 ** min(consecutive_failures, 5), 30)
-                logger.info(f"⏳ انتظار {wait_time} ثانية قبل إعادة الاتصال...")
+                logger.info(f"انتظار {wait_time} ثانية قبل إعادة الاتصال...")
                 time.sleep(wait_time)
                 
                 if self.is_running:
                     self.restart_stream()
             else:
-                # إذا نجح البث، إعادة تعيين العدادات
                 if consecutive_failures > 0:
-                    logger.info("✅ تم استعادة الاتصال بنجاح!")
+                    logger.info("تم استعادة الاتصال بنجاح!")
                 consecutive_failures = 0
                 self.reconnect_attempts = 0
             
@@ -69,9 +67,8 @@ class StreamManager:
 
     def restart_stream(self):
         """إعادة تشغيل العملية مع تنظيف كامل"""
-        logger.info("🔄 إعادة بناء الاتصال...")
+        logger.info("إعادة بناء الاتصال...")
         
-        # إنهاء العملية القديمة بشكل آمن
         if self.process and self.process.poll() is None:
             try:
                 self.process.terminate()
@@ -82,7 +79,6 @@ class StreamManager:
                 except:
                     pass
         
-        # إعادة بناء الأمر مع إعدادات محسّنة
         if hasattr(self, 'last_command'):
             try:
                 self.process = subprocess.Popen(
@@ -92,21 +88,18 @@ class StreamManager:
                     universal_newlines=True,
                     bufsize=1
                 )
-                logger.info("✅ تم إعادة بناء عملية البث")
+                logger.info("تم إعادة بناء عملية البث")
             except Exception as e:
-                logger.error(f"❌ فشل إعادة البناء: {str(e)}")
+                logger.error(f"فشل إعادة البناء: {str(e)}")
 
     def start_stream(self, m3u8_url, rtmp_url, stream_key, logo_path=None):
-        """بدء البث مع إعدادات استقرار محسّنة"""
-        # فحص حقيقي للعملية قبل بدء بث جديد
+        """بدء البث مع إعدادات Anti-Ban محسّنة - نسخ كل شيء من المصدر + اللوجو"""
         if self.process and self.process.poll() is None:
             return False, "البث يعمل بالفعل!"
         
-        # تنظيف الحالة السابقة
         self.is_running = False
         self.process = None
 
-        # حفظ البيانات للاستخدام في إعادة الاتصال
         self.last_m3u8_url = m3u8_url
         self.last_rtmp_url = rtmp_url
         self.last_stream_key = stream_key
@@ -116,82 +109,79 @@ class StreamManager:
         rtmp_url = rtmp_url.rstrip('/')
         full_rtmp_url = f"{rtmp_url}/{stream_key}"
 
-        # أمر FFmpeg محسّن للاستقرار + Anti-Detection
         command = [
             config.FFMPEG_CMD,
             '-hide_banner',
             '-loglevel', 'error',
             
-            # إعدادات إعادة الاتصال المحسّنة للمصدر
-            '-timeout', '20000000',
+            '-timeout', '30000000',
             '-reconnect', '1',
             '-reconnect_streamed', '1',
             '-reconnect_at_eof', '1',
-            '-reconnect_delay_max', '10',
+            '-reconnect_delay_max', '15',
             '-multiple_requests', '1',
             
-            # إعدادات الشبكة
-            '-analyzeduration', '10000000',
-            '-probesize', '10000000',
+            '-analyzeduration', '15000000',
+            '-probesize', '15000000',
             
-            # قراءة بسرعة حقيقية
             '-re',
-            '-fflags', '+genpts',
+            '-fflags', '+genpts+igndts',
             '-avoid_negative_ts', 'make_zero',
             
-            # User Agent
             '-user_agent', config.USER_AGENT,
+            '-referer', 'https://www.google.com/',
             
             '-i', m3u8_url
         ]
 
-        # إضافة اللوجو إذا كان موجوداً
+        random_x = random.randint(5, 20)
+        random_y = random.randint(5, 20)
+        logo_opacity = round(random.uniform(0.85, 0.95), 2)
+        
         if logo_path and os.path.exists(logo_path):
             command.extend(['-i', logo_path])
-            command.extend([
-                '-filter_complex',
-                '[0:v]fps=30,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2[v];[1:v]scale=500:-1[logo];[v][logo]overlay=W-w-10:10:format=auto,format=yuv420p'
-            ])
+            
+            filter_complex = (
+                f"[1:v]format=rgba,colorchannelmixer=aa={logo_opacity}[logo_opacity];"
+                f"[0:v][logo_opacity]overlay=W-w-{random_x}:{random_y}:format=auto,"
+                f"drawtext=text='%{{localtime\\:%H\\:%M}}':x=15:y=H-th-15:"
+                f"fontsize=18:fontcolor=white@0.5:shadowcolor=black@0.3:shadowx=1:shadowy=1,"
+                f"fps=30,format=yuv420p[outv]"
+            )
+            command.extend(['-filter_complex', filter_complex])
+            command.extend(['-map', '[outv]', '-map', '0:a'])
         else:
-            command.extend([
-                '-vf', 'fps=30,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p'
-            ])
+            filter_v = (
+                f"drawtext=text='%{{localtime\\:%H\\:%M}}':x=15:y=H-th-15:"
+                f"fontsize=18:fontcolor=white@0.5:shadowcolor=black@0.3:shadowx=1:shadowy=1,"
+                f"fps=30,format=yuv420p"
+            )
+            command.extend(['-vf', filter_v])
 
-        # إعدادات ترميز تبدو كبث أصلي (تخفي إعادة البث)
         command.extend([
-            # فيديو - إعدادات تحاكي الكاميرات الحقيقية
             '-c:v', 'libx264',
-            '-preset', 'medium',
-            '-tune', 'film',
-            '-profile:v', 'main',
-            '-level', '4.1',
-            '-crf', '21',
+            '-preset', 'veryfast',
+            '-tune', 'zerolatency',
+            '-profile:v', 'baseline',
+            '-level', '4.0',
             
-            # GOP settings - تبدو طبيعية أكثر
-            '-g', '120',
-            '-keyint_min', '30',
-            '-sc_threshold', '40',
+            '-g', '60',
+            '-keyint_min', '60',
+            '-sc_threshold', '0',
             
-            # Bitrate - ثابت ومستقر
-            '-b:v', '2800k',
-            '-minrate', '2400k',
-            '-maxrate', '3200k',
-            '-bufsize', '5600k',
+            '-b:v', '2500k',
+            '-minrate', '2000k',
+            '-maxrate', '3000k',
+            '-bufsize', '5000k',
             
-            # Color settings
             '-pix_fmt', 'yuv420p',
-            '-colorspace', 'bt709',
-            '-color_primaries', 'bt709',
-            '-color_trc', 'bt709',
             
-            # صوت - معايير فيسبوك
             '-c:a', 'aac',
             '-b:a', '128k',
-            '-ar', '48000',
+            '-ar', '44100',
             '-ac', '2',
             '-strict', 'experimental',
             
-            # RTMP settings - مبسطة لفيسبوك
             '-f', 'flv',
             '-flvflags', 'no_duration_filesize',
             
@@ -199,9 +189,10 @@ class StreamManager:
         ])
 
         try:
-            logger.info(f"🚀 بدء البث من: {m3u8_url[:50]}...")
-            logger.info(f"🎯 الوجهة: {rtmp_url}")
-            logger.info(f"🔑 Stream Key: {stream_key[:10]}...")
+            logger.info(f"بدء البث من: {m3u8_url[:50]}...")
+            logger.info(f"الوجهة: {rtmp_url}")
+            logger.info(f"Stream Key: {stream_key[:10]}...")
+            logger.info(f"Anti-Ban: Logo opacity={logo_opacity}, pos=({random_x},{random_y})")
             
             self.last_command = command
             self.process = subprocess.Popen(
@@ -212,22 +203,18 @@ class StreamManager:
                 bufsize=1
             )
             
-            # انتظار للتحقق من الاتصال بفيسبوك
-            logger.info("⏳ فحص الاتصال بفيسبوك...")
+            logger.info("فحص الاتصال بفيسبوك...")
             
-            # فحص متعدد المراحل
             for attempt in range(3):
                 time.sleep(5)
                 
-                # فحص إذا العملية ماتت
                 if self.process.poll() is not None:
                     stderr = self.process.stderr.read() if self.process.stderr else "لا توجد تفاصيل"
-                    logger.error(f"❌ FFmpeg فشل: {stderr[:300]}")
+                    logger.error(f"FFmpeg فشل: {stderr[:300]}")
                     
                     self.process = None
                     self.is_running = False
                     
-                    # تحليل الأخطاء
                     if "Cannot read RTMP handshake" in stderr or "Error opening output" in stderr:
                         return False, "❌ فشل الاتصال بفيسبوك!\n\n🔍 الأسباب المحتملة:\n• Stream Key خاطئ أو منتهي\n• فيسبوك لم يبدأ استقبال البث بعد\n• حاول احصل على Stream Key جديد\n\n💡 تأكد أن صفحة 'Go Live' مفتوحة قبل البث!"
                     elif "Connection refused" in stderr or "timed out" in stderr:
@@ -237,37 +224,30 @@ class StreamManager:
                     else:
                         return False, f"❌ فشل البث.\n\nالخطأ: {stderr[:150]}"
             
-            # إذا وصلنا هنا، العملية مازالت شغالة بعد 15 ثانية
             if self.process.poll() is None:
-                # فحص آخر للـ stderr
                 try:
                     import select
                     if select.select([self.process.stderr], [], [], 0)[0]:
                         stderr_check = self.process.stderr.read(300)
                         if stderr_check and ("Error" in stderr_check or "Cannot" in stderr_check):
-                            logger.warning(f"⚠️ تحذيرات: {stderr_check[:150]}")
-                            # لكن العملية مازالت شغالة، نكمل
+                            logger.warning(f"تحذيرات: {stderr_check[:150]}")
                 except:
                     pass
                 
-                # الآن فقط نعين is_running = True بعد التأكد الكامل
                 self.is_running = True
                 
-                # بدء مراقبة العملية
                 self.monitor_thread = threading.Thread(target=self.monitor_process, daemon=True)
                 self.monitor_thread.start()
                 
-                logger.info("✅ البث متصل بفيسبوك!")
-                return True, "✅ البث نشط ومتصل بفيسبوك!\n\n🔄 حماية ضد الانقطاع نشطة.\n📺 افتح صفحة البث الآن!"
+                logger.info("البث متصل بفيسبوك!")
+                return True, "✅ البث نشط ومتصل بفيسبوك!\n\n🛡️ حماية Anti-Ban نشطة:\n• تم إضافة اللوجو بشفافية عشوائية\n• إضافة ختم الوقت الحي\n• إعدادات تبدو كبث أصلي\n\n📺 افتح صفحة البث الآن!"
             else:
-                # العملية فشلت - تحليل السبب
                 stderr = self.process.stderr.read() if self.process.stderr else "لا توجد تفاصيل"
-                logger.error(f"❌ FFmpeg خطأ: {stderr[:300]}")
+                logger.error(f"FFmpeg خطأ: {stderr[:300]}")
                 
                 self.process = None
                 self.is_running = False
                 
-                # رسائل خطأ مفصلة
                 if "Server returned 4" in stderr or "Bad Request" in stderr:
                     return False, "❌ رابط M3U8 غير صالح أو انتهى!\n\nجرب رابط M3U8 جديد."
                 elif "Connection" in stderr or "timeout" in stderr:
@@ -277,7 +257,7 @@ class StreamManager:
                 
         except Exception as e:
             self.is_running = False
-            logger.error(f"❌ خطأ في بدء البث: {str(e)}")
+            logger.error(f"خطأ في بدء البث: {str(e)}")
             return False, f"❌ خطأ: {str(e)}"
 
     def stop_stream(self):
@@ -285,13 +265,13 @@ class StreamManager:
         self.is_running = False
         
         if self.process and self.process.poll() is None:
-            logger.info("🛑 إيقاف البث...")
+            logger.info("إيقاف البث...")
             
             try:
                 self.process.terminate()
                 self.process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                logger.warning("⚠️ العملية لم تتوقف، استخدام kill...")
+                logger.warning("العملية لم تتوقف، استخدام kill...")
                 try:
                     self.process.kill()
                     self.process.wait(timeout=2)
@@ -301,14 +281,13 @@ class StreamManager:
                 logger.error(f"خطأ في الإيقاف: {e}")
             
             self.process = None
-            logger.info("✅ تم إيقاف البث")
+            logger.info("تم إيقاف البث")
             return True, "✅ تم إيقاف البث بنجاح."
         
         return False, "❌ لا يوجد بث نشط."
 
     def get_status(self):
         """التحقق من حالة البث مع معلومات إضافية"""
-        # فحص حقيقي للعملية
         if self.process and self.process.poll() is None:
             self.is_running = True
             return {
@@ -317,9 +296,8 @@ class StreamManager:
                 'max_attempts': self.max_reconnect_attempts
             }
         else:
-            # إذا العملية ماتت، تحديث الحالة
             if self.is_running:
-                logger.warning("⚠️ العملية توقفت لكن الحالة كانت مازالت نشطة - تم التصحيح")
+                logger.warning("العملية توقفت لكن الحالة كانت مازالت نشطة - تم التصحيح")
                 self.is_running = False
             return {'active': False}
 
@@ -327,5 +305,5 @@ class StreamManager:
         """الحصول على حالة مفصلة"""
         status = self.get_status()
         if status['active']:
-            return f"✅ البث نشط\n📊 محاولات إعادة الاتصال: {status['reconnect_attempts']}/{status['max_attempts']}"
+            return f"✅ البث نشط\n🛡️ Anti-Ban نشط\n📊 محاولات إعادة الاتصال: {status['reconnect_attempts']}/{status['max_attempts']}"
         return "❌ البث متوقف"
