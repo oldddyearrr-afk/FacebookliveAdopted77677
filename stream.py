@@ -98,8 +98,13 @@ class StreamManager:
 
     def start_stream(self, m3u8_url, rtmp_url, stream_key, logo_path=None):
         """بدء البث مع إعدادات استقرار محسّنة"""
-        if self.is_running:
+        # فحص حقيقي للعملية قبل بدء بث جديد
+        if self.process and self.process.poll() is None:
             return False, "البث يعمل بالفعل!"
+        
+        # تنظيف الحالة السابقة
+        self.is_running = False
+        self.process = None
 
         # حفظ البيانات للاستخدام في إعادة الاتصال
         self.last_m3u8_url = m3u8_url
@@ -214,12 +219,14 @@ class StreamManager:
                 bufsize=1
             )
             
-            self.is_running = True
-            
-            # انتظار للتحقق من بدء البث
+            # انتظار للتحقق من بدء البث (لا نعين is_running بعد)
             time.sleep(8)
             
+            # التحقق الحقيقي من نجاح البث
             if self.process.poll() is None:
+                # الآن فقط نعين is_running = True بعد التأكد
+                self.is_running = True
+                
                 # بدء مراقبة العملية
                 self.monitor_thread = threading.Thread(target=self.monitor_process, daemon=True)
                 self.monitor_thread.start()
@@ -227,9 +234,11 @@ class StreamManager:
                 logger.info("✅ البث نشط ونظام المراقبة يعمل!")
                 return True, "✅ البث نشط الآن مع حماية ضد الانقطاع!\n\n🔄 سيتم إعادة الاتصال تلقائياً عند أي انقطاع."
             else:
-                self.is_running = False
+                # العملية فشلت - تنظيف كامل
                 stderr = self.process.stderr.read() if self.process.stderr else "لا توجد تفاصيل"
                 logger.error(f"FFmpeg stderr: {stderr[:200]}")
+                self.process = None
+                self.is_running = False
                 return False, f"❌ فشل البث.\n\nالخطأ: {stderr[:100]}"
                 
         except Exception as e:

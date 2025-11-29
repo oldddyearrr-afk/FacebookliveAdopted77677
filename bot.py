@@ -26,7 +26,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "📋 الأوامر:\n"
         "/stream - بدء البث\n"
         "/stop - إيقاف البث\n"
-        "/status - حالة البث"
+        "/status - حالة البث\n"
+        "/reset - إعادة تعيين (طوارئ)"
     )
     return ConversationHandler.END
 
@@ -91,6 +92,24 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text(f"📊 حالة البث:\n\n{status_msg}")
     return ConversationHandler.END
 
+async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """إعادة تعيين حالة البوت بالكامل (للطوارئ)"""
+    stream_manager.is_running = False
+    if stream_manager.process:
+        try:
+            if stream_manager.process.poll() is None:
+                stream_manager.process.kill()
+        except:
+            pass
+    stream_manager.process = None
+    stream_manager.reconnect_attempts = 0
+    
+    await update.message.reply_text(
+        "🔄 تم إعادة تعيين البوت بالكامل!\n\n"
+        "يمكنك الآن بدء بث جديد باستخدام /stream"
+    )
+    return ConversationHandler.END
+
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """إلغاء الحوار"""
     await update.message.reply_text("❌ تم إلغاء العملية.")
@@ -113,6 +132,7 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("stop", stop_stream_command))
     application.add_handler(CommandHandler("status", status_command))
+    application.add_handler(CommandHandler("reset", reset_command))
     application.add_handler(conv_handler)
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
