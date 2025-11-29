@@ -141,13 +141,11 @@ verifyChain = no
             '-b:a', '96k',
             '-ar', '44100',
             '-ac', '2',
-            '-async', '2',
             
-            '-max_muxing_queue_size', '1024',
-            '-thread_queue_size', '256',
-            '-fflags', '+nobuffer+low_delay',
+            '-max_muxing_queue_size', '512',
+            '-thread_queue_size', '128',
             '-f', 'flv',
-            '-flvflags', 'no_duration_filesize+no_delay',
+            '-flvflags', 'no_duration_filesize',
             
             rtmp_url
         ])
