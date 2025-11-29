@@ -82,7 +82,7 @@ verifyChain = no
         # الحصول على معاملات عشوائية لتجنب الكشف
         anti_params = self.anti_detect.randomize_ffmpeg_params()
         
-        is_ts_stream = '.ts' in m3u8_url or 'mpegts' in m3u8_url.lower() or '?' in m3u8_url and 'm3u8' not in m3u8_url.lower()
+        is_ts_stream = '.ts' in m3u8_url or 'mpegts' in m3u8_url.lower() or ('?' in m3u8_url and 'm3u8' not in m3u8_url.lower())
         
         command = [
             config.FFMPEG_CMD,
@@ -95,18 +95,17 @@ verifyChain = no
                 '-reconnect', '1',
                 '-reconnect_streamed', '1', 
                 '-reconnect_at_eof', '1',
-                '-reconnect_delay_max', str(random.randint(3, 8)),  # تأخير عشوائي
+                '-reconnect_delay_max', str(random.randint(3, 8)),
             ])
         
         command.extend([
             '-rw_timeout', '30000000',
             '-timeout', '30000000',
-            '-analyzeduration', '10000000',
-            '-probesize', '20000000',
+            '-analyzeduration', '5000000',
+            '-probesize', '10000000',
             '-fflags', '+genpts+igndts+discardcorrupt',
-            '-err_detect', 'ignore_err+aggressive',
+            '-err_detect', 'ignore_err',
             
-            # User-Agent عشوائي لتجنب الكشف
             '-headers', f'User-Agent: {anti_params["user_agent"]}\r\n',
             
             '-i', m3u8_url,
@@ -134,33 +133,28 @@ verifyChain = no
             '-preset', anti_params['preset'],
             '-tune', 'zerolatency',
             '-profile:v', 'baseline',
-            '-level', '3.0',
+            '-level', '3.1',
             '-pix_fmt', 'yuv420p',
             
-            '-r', str(random.randint(25, 30)),  # معدل إطارات عشوائي قليلاً
+            '-r', '30',
             '-fps_mode', 'cfr',
             
-            '-b:v', anti_params['bitrate'],  # معدل بت عشوائي
+            '-b:v', anti_params['bitrate'],
             '-maxrate', str(int(anti_params['bitrate'].rstrip('k')) + 500) + 'k',
-            '-bufsize', anti_params['bufsize'],  # حجم تخزين مؤقت عشوائي
-            '-g', anti_params['gop'],  # GOP عشوائي
-            '-keyint_min', str(random.randint(12, 18)),
-            '-x264opts', 'no-scenecut:aq-mode=0:vbv-maxrate=' + anti_params['bitrate'].rstrip('k') + ':vbv-bufsize=' + anti_params['bufsize'].rstrip('k'),
+            '-bufsize', anti_params['bufsize'],
+            '-g', anti_params['gop'],
+            '-keyint_min', '15',
+            '-sc_threshold', '0',
             
             '-c:a', 'aac',
             '-b:a', str(random.choice([96, 128])) + 'k',
-            '-ar', str(random.choice([44100, 48000])),
+            '-ar', '44100',
             '-ac', '2',
             
-            '-max_muxing_queue_size', str(random.randint(256, 512)),
-            '-thread_queue_size', str(random.randint(64, 256)),
+            '-max_muxing_queue_size', '512',
+            '-thread_queue_size', '128',
             '-f', 'flv',
             '-flvflags', 'no_duration_filesize',
-            
-            # معاملات إضافية لتجنب الكشف
-            '-rtbufsize', '1M',
-            '-fflags', '+genpts+discardcorrupt+igndts',
-            '-bsf:v', 'extract_extradata=remove_trailing_0',
             
             rtmp_url
         ])
@@ -224,8 +218,6 @@ verifyChain = no
         logger.info("🔐 تفعيل حيل تجنب الكشف...")
         self.anti_detect.apply_stream_spacing()
         
-        # تأخير عشوائي قبل الاتصال
-        logger.info("⏳ تأخير عشوائي قبل الاتصال (لتجنب الكشف)...")
         time.sleep(random.uniform(2, 5))
         
         logger.info("🚀 بدء stunnel...")
@@ -235,9 +227,8 @@ verifyChain = no
         command = self.build_ffmpeg_command(m3u8_url, stream_key, logo_path)
         self.last_command = command
         
-        logger.info(f"📺 بدء البث مع تقنيات متقدمة...")
+        logger.info(f"📺 بدء البث...")
         logger.info(f"📍 المصدر: {m3u8_url[:60]}...")
-        logger.info(f"🔑 Stream Key: {stream_key[:15]}...")
         
         try:
             log_file = open('/tmp/ffmpeg_output.log', 'w')
@@ -248,9 +239,8 @@ verifyChain = no
             )
             
             logger.info(f"✅ FFmpeg بدأ بـ PID: {self.process.pid}")
-            logger.info(f"🛡️ حيل التجنب فعالة")
             
-            time.sleep(8)
+            time.sleep(10)
             
             if self.process.poll() is not None:
                 stderr = ""
@@ -265,15 +255,15 @@ verifyChain = no
                 self.stop_stunnel()
                 
                 if "401" in stderr or "Unauthorized" in stderr:
-                    if "input" in stderr.lower():
-                        return False, "❌ رابط M3U8 غير صالح أو انتهى!\n\nاحصل على رابط جديد."
-                    return False, "❌ خطأ في المصادقة!"
+                    return False, "❌ رابط M3U8 غير صالح أو انتهى!\n\nاحصل على رابط جديد."
                 elif "403" in stderr:
-                    return False, "❌ الوصول مرفوض! تحقق من الروابط."
-                elif "Connection refused" in stderr:
+                    return False, "❌ الوصول مرفوض من المصدر!"
+                elif "Connection refused" in stderr or "refused" in stderr.lower():
                     return False, "❌ فشل الاتصال بفيسبوك!\n\nتأكد من:\n• Stream Key صحيح وجديد\n• صفحة Go Live مفتوحة في فيسبوك"
                 elif "timed out" in stderr:
-                    return False, "❌ انتهت مهلة الاتصال!\n\nتحقق من الإنترنت."
+                    return False, "❌ انتهت مهلة الاتصال!"
+                elif "Invalid argument" in stderr or "Unable to parse" in stderr:
+                    return False, "❌ خطأ في معاملات البث! تحديث توقع."
                 else:
                     return False, f"❌ فشل البث:\n{stderr[:200]}"
             
