@@ -84,11 +84,16 @@ verifyChain = no
             '-reconnect', '1',
             '-reconnect_streamed', '1',
             '-reconnect_at_eof', '1',
-            '-reconnect_delay_max', '10',
+            '-reconnect_delay_max', '5',
+            '-reconnect_on_network_error', '1',
+            '-reconnect_on_http_error', '4xx,5xx',
             
-            '-timeout', '30000000',
-            '-analyzeduration', '10000000',
-            '-probesize', '10000000',
+            '-rw_timeout', '15000000',
+            '-timeout', '15000000',
+            '-analyzeduration', '3000000',
+            '-probesize', '5000000',
+            '-fflags', '+genpts+discardcorrupt',
+            '-flags', 'low_delay',
             
             '-headers', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\r\nOrigin: https://twitter.com\r\nReferer: https://twitter.com/\r\n',
             
@@ -105,7 +110,7 @@ verifyChain = no
         
         command.extend([
             '-c:v', 'libx264',
-            '-preset', 'veryfast',
+            '-preset', 'superfast',
             '-tune', 'zerolatency',
             '-profile:v', 'high',
             '-level', '4.2',
@@ -113,14 +118,17 @@ verifyChain = no
             
             '-b:v', '4500k',
             '-maxrate', '5000k',
-            '-bufsize', '8000k',
+            '-bufsize', '3000k',
             '-g', '60',
+            '-keyint_min', '60',
+            '-sc_threshold', '0',
             
             '-c:a', 'aac',
             '-b:a', '128k',
             '-ar', '44100',
             '-ac', '2',
             
+            '-max_muxing_queue_size', '1024',
             '-f', 'flv',
             '-flvflags', 'no_duration_filesize',
             
@@ -130,14 +138,27 @@ verifyChain = no
         return command
 
     def monitor_process(self):
-        """مراقبة العملية"""
+        """مراقبة العملية مع إعادة اتصال سريعة"""
+        consecutive_failures = 0
+        
         while self.is_running and self.process:
             if self.process.poll() is not None:
-                logger.warning(f"البث توقف! (المحاولة {self.reconnect_attempts + 1}/{self.max_reconnect_attempts})")
+                self.reconnect_attempts += 1
+                consecutive_failures += 1
+                logger.warning(f"البث توقف! محاولة {self.reconnect_attempts}/{self.max_reconnect_attempts}")
                 
                 if self.reconnect_attempts < self.max_reconnect_attempts:
-                    self.reconnect_attempts += 1
-                    time.sleep(5)
+                    wait_time = min(2 * consecutive_failures, 10)
+                    time.sleep(wait_time)
+                    
+                    if consecutive_failures >= 3:
+                        logger.info("إعادة تشغيل stunnel...")
+                        self.stop_stunnel()
+                        time.sleep(1)
+                        if not self.start_stunnel():
+                            logger.error("فشل إعادة تشغيل stunnel")
+                            continue
+                    
                     if self.is_running and self.last_command:
                         try:
                             self.process = subprocess.Popen(
@@ -145,16 +166,21 @@ verifyChain = no
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE
                             )
-                            logger.info("تم إعادة الاتصال")
+                            logger.info("تم إعادة الاتصال بنجاح")
+                            time.sleep(5)
+                            if self.process.poll() is None:
+                                consecutive_failures = 0
                         except Exception as e:
                             logger.error(f"فشل إعادة الاتصال: {e}")
                 else:
+                    logger.error("تم الوصول للحد الأقصى من المحاولات")
                     self.is_running = False
                     self.stop_stunnel()
                     break
             else:
-                self.reconnect_attempts = 0
-            time.sleep(5)
+                if consecutive_failures > 0:
+                    consecutive_failures = max(0, consecutive_failures - 1)
+            time.sleep(3)
 
     def start_stream(self, m3u8_url, rtmp_url, stream_key, logo_path=None):
         """بدء البث"""
