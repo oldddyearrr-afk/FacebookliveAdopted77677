@@ -18,9 +18,15 @@ stream_manager = StreamManager()
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """بداية الحوار"""
     await update.message.reply_text(
-        "👋 مرحباً بك في بوت البث!\n\n"
-        "أنا أساعدك في إعادة بث M3U8 إلى فيسبوك.\n"
-        "أرسل /stream لبدء البث أو /stop لإيقافه."
+        "👋 مرحباً بك في بوت البث المحسّن!\n\n"
+        "🎯 الميزات:\n"
+        "• إعادة اتصال تلقائية (50 محاولة)\n"
+        "• حماية من الانقطاع\n"
+        "• استقرار محسّن\n\n"
+        "📋 الأوامر:\n"
+        "/stream - بدء البث\n"
+        "/stop - إيقاف البث\n"
+        "/status - حالة البث"
     )
     return ConversationHandler.END
 
@@ -76,6 +82,12 @@ async def stop_stream_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     await update.message.reply_text(msg)
     return ConversationHandler.END
 
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """التحقق من حالة البث"""
+    status_msg = stream_manager.get_detailed_status()
+    await update.message.reply_text(f"📊 حالة البث:\n\n{status_msg}")
+    return ConversationHandler.END
+
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """إلغاء الحوار"""
     await update.message.reply_text("❌ تم إلغاء العملية.")
@@ -97,6 +109,7 @@ def main() -> None:
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("stop", stop_stream_command))
+    application.add_handler(CommandHandler("status", status_command))
     application.add_handler(conv_handler)
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
