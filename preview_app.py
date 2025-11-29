@@ -4,10 +4,8 @@ import socketserver
 import os
 import json
 import config
-import socket
 
 PORT = 5000
-
 socketserver.TCPServer.allow_reuse_address = True
 
 class PreviewHandler(http.server.SimpleHTTPRequestHandler):
@@ -17,8 +15,7 @@ class PreviewHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Content-type', 'text/html; charset=utf-8')
             self.end_headers()
             with open('templates/preview.html', 'r', encoding='utf-8') as f:
-                html = f.read()
-            self.wfile.write(html.encode('utf-8'))
+                self.wfile.write(f.read().encode('utf-8'))
         elif self.path == '/api/config':
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
@@ -30,12 +27,22 @@ class PreviewHandler(http.server.SimpleHTTPRequestHandler):
                 'opacity': config.LOGO_OPACITY
             }
             self.wfile.write(json.dumps(data).encode('utf-8'))
-        elif self.path == '/static/logo.png':
-            self.send_response(200)
-            self.send_header('Content-type', 'image/png')
-            self.end_headers()
-            with open('static/logo.png', 'rb') as f:
-                self.wfile.write(f.read())
+        elif self.path.startswith('/static/'):
+            file_path = self.path[1:]
+            if os.path.exists(file_path):
+                self.send_response(200)
+                if file_path.endswith('.png'):
+                    self.send_header('Content-type', 'image/png')
+                elif file_path.endswith('.jpg') or file_path.endswith('.jpeg'):
+                    self.send_header('Content-type', 'image/jpeg')
+                else:
+                    self.send_header('Content-type', 'application/octet-stream')
+                self.end_headers()
+                with open(file_path, 'rb') as f:
+                    self.wfile.write(f.read())
+            else:
+                self.send_response(404)
+                self.end_headers()
         else:
             self.send_response(404)
             self.end_headers()
