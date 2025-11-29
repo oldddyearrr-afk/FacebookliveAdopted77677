@@ -61,11 +61,20 @@ async def get_m3u8(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def get_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """استقبال مفتاح البث"""
     m3u8 = context.user_data['m3u8']
-    key = update.message.text
+    key = update.message.text.strip()
+    
+    # فحص أساسي للـ Stream Key
+    if len(key) < 10:
+        await update.message.reply_text("❌ Stream Key قصير جداً! تأكد من نسخه بالكامل.")
+        return KEY
     
     await update.message.reply_text(
-        "⏳ جاري بدء البث... يرجى الانتظار...\n\n"
-        "⚠️ تنبيه: استخدم Stream Key جديد لكل بث لتجنب الحظر!"
+        "⏳ جاري الاتصال بفيسبوك...\n\n"
+        "⚠️ تأكد من:\n"
+        "• Stream Key جديد وصالح\n"
+        "• صفحة البث مفتوحة في فيسبوك\n"
+        "• الإنترنت متصل\n\n"
+        "⏱️ انتظر 15 ثانية..."
     )
     
     # الرابط الافتراضي لفيسبوك

@@ -122,28 +122,25 @@ class StreamManager:
             '-hide_banner',
             '-loglevel', 'error',
             
-            # إعدادات إعادة الاتصال المحسّنة
-            '-timeout', '30000000',
+            # إعدادات إعادة الاتصال المحسّنة للمصدر
+            '-timeout', '20000000',
             '-reconnect', '1',
             '-reconnect_streamed', '1',
             '-reconnect_at_eof', '1',
-            '-reconnect_delay_max', '15',
+            '-reconnect_delay_max', '10',
             '-multiple_requests', '1',
-            '-rw_timeout', '10000000',
             
             # إعدادات الشبكة
-            '-analyzeduration', '20000000',
-            '-probesize', '20000000',
+            '-analyzeduration', '10000000',
+            '-probesize', '10000000',
             
-            # قراءة بسرعة حقيقية مع jitter طبيعي
+            # قراءة بسرعة حقيقية
             '-re',
-            '-stream_loop', '-1',
-            '-fflags', '+genpts+igndts',
+            '-fflags', '+genpts',
             '-avoid_negative_ts', 'make_zero',
             
-            # User Agent متنوع
+            # User Agent
             '-user_agent', config.USER_AGENT,
-            '-headers', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             
             '-i', m3u8_url
         ]
@@ -196,19 +193,23 @@ class StreamManager:
             
             # RTMP settings - محسّنة لفيسبوك
             '-f', 'flv',
-            '-flvflags', 'no_duration_filesize+no_metadata',
-            '-max_muxing_queue_size', '2048',
+            '-flvflags', 'no_duration_filesize',
             
-            # TCP settings للاستقرار
-            '-rtmp_buffer', '5000',
+            # إعدادات اتصال RTMP حاسمة!
             '-rtmp_live', 'live',
+            '-rtmp_buffer', '1000',
+            '-rtmp_conn', 'S:' + stream_key,
+            
+            # TCP وقت الانتظار
+            '-timeout', '5000000',
             
             full_rtmp_url
         ])
 
         try:
-            logger.info(f"🚀 بدء البث: {m3u8_url[:50]}...")
+            logger.info(f"🚀 بدء البث من: {m3u8_url[:50]}...")
             logger.info(f"🎯 الوجهة: {rtmp_url}")
+            logger.info(f"🔑 Stream Key: {stream_key[:10]}...")
             
             self.last_command = command
             self.process = subprocess.Popen(
@@ -219,11 +220,29 @@ class StreamManager:
                 bufsize=1
             )
             
-            # انتظار للتحقق من بدء البث (لا نعين is_running بعد)
-            time.sleep(8)
+            # انتظار أطول للتحقق من الاتصال بفيسبوك
+            logger.info("⏳ فحص الاتصال بفيسبوك...")
+            time.sleep(12)
             
             # التحقق الحقيقي من نجاح البث
             if self.process.poll() is None:
+                # قراءة أي تحذيرات
+                try:
+                    stderr_data = self.process.stderr.read(500)
+                    if stderr_data and len(stderr_data) > 0:
+                        logger.warning(f"⚠️ رسائل FFmpeg: {stderr_data[:200]}")
+                        
+                        # فحص أخطاء شائعة
+                        if "Connection refused" in stderr_data or "timed out" in stderr_data:
+                            self.process.kill()
+                            return False, "❌ فشل الاتصال بفيسبوك!\n\nتحقق من:\n• Stream Key صحيح؟\n• الإنترنت متصل؟\n• فيسبوك لم يحظر البث؟"
+                        
+                        if "401" in stderr_data or "403" in stderr_data:
+                            self.process.kill()
+                            return False, "❌ Stream Key خاطئ أو منتهي!\n\nاحصل على Stream Key جديد من فيسبوك."
+                except:
+                    pass
+                
                 # الآن فقط نعين is_running = True بعد التأكد
                 self.is_running = True
                 
@@ -231,15 +250,23 @@ class StreamManager:
                 self.monitor_thread = threading.Thread(target=self.monitor_process, daemon=True)
                 self.monitor_thread.start()
                 
-                logger.info("✅ البث نشط ونظام المراقبة يعمل!")
-                return True, "✅ البث نشط الآن مع حماية ضد الانقطاع!\n\n🔄 سيتم إعادة الاتصال تلقائياً عند أي انقطاع."
+                logger.info("✅ البث متصل بفيسبوك!")
+                return True, "✅ البث نشط ومتصل بفيسبوك!\n\n🔄 حماية ضد الانقطاع نشطة.\n📺 افتح صفحة البث الآن!"
             else:
-                # العملية فشلت - تنظيف كامل
+                # العملية فشلت - تحليل السبب
                 stderr = self.process.stderr.read() if self.process.stderr else "لا توجد تفاصيل"
-                logger.error(f"FFmpeg stderr: {stderr[:200]}")
+                logger.error(f"❌ FFmpeg خطأ: {stderr[:300]}")
+                
                 self.process = None
                 self.is_running = False
-                return False, f"❌ فشل البث.\n\nالخطأ: {stderr[:100]}"
+                
+                # رسائل خطأ مفصلة
+                if "Server returned 4" in stderr or "Bad Request" in stderr:
+                    return False, "❌ رابط M3U8 غير صالح أو انتهى!\n\nجرب رابط M3U8 جديد."
+                elif "Connection" in stderr or "timeout" in stderr:
+                    return False, "❌ مشكلة اتصال بالإنترنت!\n\nتحقق من الاتصال وحاول مرة أخرى."
+                else:
+                    return False, f"❌ فشل البث.\n\nالخطأ: {stderr[:100]}"
                 
         except Exception as e:
             self.is_running = False
