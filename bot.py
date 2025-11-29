@@ -57,7 +57,10 @@ async def get_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     m3u8 = context.user_data['m3u8']
     key = update.message.text
     
-    await update.message.reply_text("⏳ جاري بدء البث... يرجى الانتظار...")
+    await update.message.reply_text(
+        "⏳ جاري بدء البث... يرجى الانتظار...\n\n"
+        "⚠️ تنبيه: استخدم Stream Key جديد لكل بث لتجنب الحظر!"
+    )
     
     # الرابط الافتراضي لفيسبوك
     rtmp = config.FACEBOOK_RTMP_URL

@@ -111,12 +111,11 @@ class StreamManager:
         rtmp_url = rtmp_url.rstrip('/')
         full_rtmp_url = f"{rtmp_url}/{stream_key}"
 
-        # أمر FFmpeg محسّن للاستقرار
+        # أمر FFmpeg محسّن للاستقرار + Anti-Detection
         command = [
             config.FFMPEG_CMD,
             '-hide_banner',
-            '-loglevel', 'warning',
-            '-stats',
+            '-loglevel', 'error',
             
             # إعدادات إعادة الاتصال المحسّنة
             '-timeout', '30000000',
@@ -128,14 +127,16 @@ class StreamManager:
             '-rw_timeout', '10000000',
             
             # إعدادات الشبكة
-            '-analyzeduration', '10000000',
-            '-probesize', '10000000',
+            '-analyzeduration', '20000000',
+            '-probesize', '20000000',
             
-            # قراءة بسرعة حقيقية
+            # قراءة بسرعة حقيقية مع jitter طبيعي
             '-re',
             '-stream_loop', '-1',
+            '-fflags', '+genpts+igndts',
+            '-avoid_negative_ts', 'make_zero',
             
-            # User Agent
+            # User Agent متنوع
             '-user_agent', config.USER_AGENT,
             '-headers', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             
@@ -154,33 +155,48 @@ class StreamManager:
                 '-vf', 'fps=30,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p'
             ])
 
-        # إعدادات الترميز المحسّنة
+        # إعدادات ترميز تبدو كبث أصلي (تخفي إعادة البث)
         command.extend([
-            # فيديو
+            # فيديو - إعدادات تحاكي الكاميرات الحقيقية
             '-c:v', 'libx264',
-            '-preset', 'veryfast',
-            '-tune', 'zerolatency',
-            '-profile:v', 'high',
-            '-level', '4.2',
-            '-crf', '23',
-            '-g', '60',
-            '-keyint_min', '60',
-            '-sc_threshold', '0',
-            '-b:v', '2500k',
-            '-maxrate', '3000k',
-            '-bufsize', '6000k',
-            '-pix_fmt', 'yuv420p',
+            '-preset', 'medium',
+            '-tune', 'film',
+            '-profile:v', 'main',
+            '-level', '4.1',
+            '-crf', '21',
             
-            # صوت
+            # GOP settings - تبدو طبيعية أكثر
+            '-g', '120',
+            '-keyint_min', '30',
+            '-sc_threshold', '40',
+            
+            # Bitrate - ثابت ومستقر
+            '-b:v', '2800k',
+            '-minrate', '2400k',
+            '-maxrate', '3200k',
+            '-bufsize', '5600k',
+            
+            # Color settings
+            '-pix_fmt', 'yuv420p',
+            '-colorspace', 'bt709',
+            '-color_primaries', 'bt709',
+            '-color_trc', 'bt709',
+            
+            # صوت - معايير فيسبوك
             '-c:a', 'aac',
             '-b:a', '128k',
-            '-ar', '44100',
+            '-ar', '48000',
             '-ac', '2',
+            '-strict', 'experimental',
             
-            # إعدادات RTMP
+            # RTMP settings - محسّنة لفيسبوك
             '-f', 'flv',
-            '-flvflags', 'no_duration_filesize',
-            '-max_muxing_queue_size', '1024',
+            '-flvflags', 'no_duration_filesize+no_metadata',
+            '-max_muxing_queue_size', '2048',
+            
+            # TCP settings للاستقرار
+            '-rtmp_buffer', '5000',
+            '-rtmp_live', 'live',
             
             full_rtmp_url
         ])
@@ -249,13 +265,20 @@ class StreamManager:
 
     def get_status(self):
         """التحقق من حالة البث مع معلومات إضافية"""
-        if self.is_running and self.process and self.process.poll() is None:
+        # فحص حقيقي للعملية
+        if self.process and self.process.poll() is None:
+            self.is_running = True
             return {
                 'active': True,
                 'reconnect_attempts': self.reconnect_attempts,
                 'max_attempts': self.max_reconnect_attempts
             }
-        return {'active': False}
+        else:
+            # إذا العملية ماتت، تحديث الحالة
+            if self.is_running:
+                logger.warning("⚠️ العملية توقفت لكن الحالة كانت مازالت نشطة - تم التصحيح")
+                self.is_running = False
+            return {'active': False}
 
     def get_detailed_status(self):
         """الحصول على حالة مفصلة"""
