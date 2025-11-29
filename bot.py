@@ -33,9 +33,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def start_stream_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """أمر بدء البث"""
-    if stream_manager.get_status():
+    # فحص حقيقي للعملية
+    if stream_manager.process and stream_manager.process.poll() is None:
         await update.message.reply_text("⚠️ البث يعمل بالفعل! استخدم /stop لإيقافه أولاً.")
         return ConversationHandler.END
+    
+    # تنظيف الحالة إذا كانت خاطئة
+    stream_manager.is_running = False
+    stream_manager.process = None
 
     await update.message.reply_text(
         "🚀 إعداد البث\n\n"
