@@ -108,7 +108,7 @@ verifyChain = no
         if logo_path and os.path.exists(logo_path):
             command.extend(['-i', logo_path])
             command.extend([
-                '-filter_complex', '[1:v]format=rgba,scale=100:-1[logo];[0:v][logo]overlay=W-w-20:20[outv]',
+                '-filter_complex', '[1:v]format=rgba,scale=250:-1[logo];[0:v][logo]overlay=W-w-35:18[outv]',
                 '-map', '[outv]',
                 '-map', '0:a?',
             ])
