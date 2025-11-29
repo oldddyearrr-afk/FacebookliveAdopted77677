@@ -146,7 +146,7 @@ class StreamManager:
                 f"[0:v][logo_opacity]overlay=W-w-{random_x}:{random_y}:format=auto,"
                 f"drawtext=text='%{{localtime\\:%H\\:%M}}':x=15:y=H-th-15:"
                 f"fontsize=18:fontcolor=white@0.5:shadowcolor=black@0.3:shadowx=1:shadowy=1,"
-                f"fps=30,format=yuv420p[outv]"
+                f"format=yuv420p[outv]"
             )
             command.extend(['-filter_complex', filter_complex])
             command.extend(['-map', '[outv]', '-map', '0:a'])
@@ -154,7 +154,7 @@ class StreamManager:
             filter_v = (
                 f"drawtext=text='%{{localtime\\:%H\\:%M}}':x=15:y=H-th-15:"
                 f"fontsize=18:fontcolor=white@0.5:shadowcolor=black@0.3:shadowx=1:shadowy=1,"
-                f"fps=30,format=yuv420p"
+                f"format=yuv420p"
             )
             command.extend(['-vf', filter_v])
 
@@ -162,17 +162,17 @@ class StreamManager:
             '-c:v', 'libx264',
             '-preset', 'veryfast',
             '-tune', 'zerolatency',
-            '-profile:v', 'baseline',
-            '-level', '4.0',
+            '-profile:v', 'high',
+            '-level', '4.2',
             
             '-g', '60',
             '-keyint_min', '60',
             '-sc_threshold', '0',
             
-            '-b:v', '2500k',
-            '-minrate', '2000k',
-            '-maxrate', '3000k',
-            '-bufsize', '5000k',
+            '-b:v', '4500k',
+            '-minrate', '4000k',
+            '-maxrate', '6000k',
+            '-bufsize', '8000k',
             
             '-pix_fmt', 'yuv420p',
             
