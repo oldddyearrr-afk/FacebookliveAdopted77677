@@ -117,9 +117,9 @@ verifyChain = no
             y_offset = int(str(config.LOGO_OFFSET_Y).strip().strip('"').strip("'"))
             logo_size = config.LOGO_SIZE
             
-            x_pos = f"main_w-overlay_w+{x_offset}"
+            x_pos = f"w-overlay_w+{x_offset}"
             if y_offset < 0:
-                y_pos = f"main_h-overlay_h-{abs(y_offset)}"
+                y_pos = f"h-overlay_h+({y_offset})"
             else:
                 y_pos = str(y_offset)
             

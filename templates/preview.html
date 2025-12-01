@@ -102,8 +102,15 @@
             
             logo.style.width = size + 'px';
             logo.style.right = x + 'px';
-            logo.style.top = Math.max(0, y) + 'px';
-            logo.style.bottom = (y < 0 ? Math.abs(y) : 'auto') + (y < 0 ? 'px' : '');
+            
+            if (y < 0) {
+                logo.style.top = 'auto';
+                logo.style.bottom = Math.abs(y) + 'px';
+            } else {
+                logo.style.top = y + 'px';
+                logo.style.bottom = 'auto';
+            }
+            
             logo.style.opacity = opacity;
             
             document.getElementById('valueX').textContent = x + 'px';
