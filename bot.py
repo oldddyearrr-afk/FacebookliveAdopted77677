@@ -1,7 +1,6 @@
 
 import logging
 import os
-import signal
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 import config
@@ -130,7 +129,65 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path == '/':
+        if self.path == '/' or self.path == '/preview':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html; charset=utf-8')
+            self.send_header('Cache-Control', 'no-cache')
+            self.end_headers()
+            try:
+                with open('templates/preview.html', 'r', encoding='utf-8') as f:
+                    self.wfile.write(f.read().encode('utf-8'))
+            except:
+                self.wfile.write(b'<h1>Preview Not Found</h1>')
+        elif self.path == '/api/config':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Cache-Control', 'no-cache')
+            self.end_headers()
+            import json
+            size_value = 150
+            if isinstance(config.LOGO_SIZE, str) and ':' in config.LOGO_SIZE:
+                try:
+                    size_value = int(config.LOGO_SIZE.split(':')[0])
+                except:
+                    pass
+            else:
+                try:
+                    size_value = int(config.LOGO_SIZE)
+                except:
+                    pass
+            
+            opacity_value = 1.0
+            try:
+                opacity_value = float(config.LOGO_OPACITY)
+            except:
+                pass
+            
+            data = {
+                'offset_x': config.LOGO_OFFSET_X,
+                'offset_y': config.LOGO_OFFSET_Y,
+                'size': size_value,
+                'opacity': opacity_value
+            }
+            self.wfile.write(json.dumps(data).encode('utf-8'))
+        elif self.path.startswith('/static/'):
+            file_path = self.path[1:]
+            if os.path.exists(file_path):
+                self.send_response(200)
+                if file_path.endswith('.png'):
+                    self.send_header('Content-type', 'image/png')
+                elif file_path.endswith('.jpg') or file_path.endswith('.jpeg'):
+                    self.send_header('Content-type', 'image/jpeg')
+                else:
+                    self.send_header('Content-type', 'application/octet-stream')
+                self.send_header('Cache-Control', 'no-cache')
+                self.end_headers()
+                with open(file_path, 'rb') as f:
+                    self.wfile.write(f.read())
+            else:
+                self.send_response(404)
+                self.end_headers()
+        elif self.path == '/health':
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.send_header('Cache-Control', 'no-cache')
@@ -143,24 +200,20 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
-def run_server(port):
-    """تشغيل Health Check Server"""
-    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
-    server.allow_reuse_address = True
-    logger.info(f"✅ Health check server running on port {port}")
-    logger.info("🎯 Server is ready!")
+def run_server_daemon(port):
+    """تشغيل Health Check Server في خيط منفصل"""
     try:
+        server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+        server.allow_reuse_address = True
+        logger.info(f"✅ Health check server running on port {port}")
+        logger.info("🎯 Server is ready!")
         server.serve_forever()
     except Exception as e:
         logger.error(f"Server error: {e}")
 
-def run_bot():
-    """تشغيل البوت في خيط منفصل"""
+def run_bot_main():
+    """تشغيل البوت في الـ Main Thread (العملية الرئيسية)"""
     try:
-        # تعطيل signal handlers في thread منفصل
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
-        signal.signal(signal.SIGTERM, signal.SIG_DFL)
-        
         application = Application.builder().token(config.BOT_TOKEN).build()
 
         conv_handler = ConversationHandler(
@@ -178,24 +231,24 @@ def run_bot():
         application.add_handler(CommandHandler("reset", reset_command))
         application.add_handler(conv_handler)
 
-        logger.info("✅ Telegram Bot started")
-        application.run_polling(allowed_updates=Update.ALL_TYPES, allowed_backends=[])
+        logger.info("✅ Telegram Bot started successfully")
+        application.run_polling(allowed_updates=Update.ALL_TYPES, timeout=30)
     except Exception as e:
         logger.error(f"❌ Bot error: {e}")
 
 def main() -> None:
-    """تشغيل Health Check Server كعملية رئيسية + البوت في الخلفية"""
+    """تشغيل Health Check Server في الخلفية + البوت في Main Thread"""
     logger.info("🚀 Starting application...")
     
     PORT = int(os.getenv('PORT', 8000))
     
-    # تشغيل البوت في خيط منفصل (daemon=True لأنه يعمل في الخلفية)
-    bot_thread = threading.Thread(target=run_bot, daemon=True)
-    bot_thread.start()
-    logger.info("✅ Bot thread started")
+    # تشغيل Health Check Server في خيط منفصل (daemon)
+    server_thread = threading.Thread(target=run_server_daemon, args=(PORT,), daemon=True)
+    server_thread.start()
+    logger.info("✅ Health check server thread started")
     
-    # تشغيل Health Check Server كعملية رئيسية
-    run_server(PORT)
+    # تشغيل البوت في الـ Main Thread (حل signal handling issues)
+    run_bot_main()
 
 if __name__ == "__main__":
     main()
